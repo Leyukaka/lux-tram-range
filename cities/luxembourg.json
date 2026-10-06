@@ -67,5 +67,7 @@
   ],
   "riverWaterways": [
     "river"
-  ]
+  ],
+  "defaultMax": 90,
+  "scaleMax": 150
 }

@@ -71,7 +71,7 @@ def render_city(city, cities, lang):
     values = {key: esc(value) for key, value in texts.items()}
     values.update(name=esc(city['name']), headline=esc(texts['map_title'].format(name=city['name'])), city_items=items, search_placeholder=esc(texts['search_placeholder'].format(example=city['searchExample'])), stat_tiles=tiles, line_rows=''.join(rows), faq_html=faq(texts, sources), other_maps=others, stats_title=esc(texts['stats_title'].format(name=city['name'])), network=esc(city['network']))
     body = Template((ROOT / 'templates/city.html').read_text(encoding='utf-8')).substitute(values)
-    config = {key: city[key] for key in ('slug', 'name', 'defaultFrom', 'areaKey')}
+    config = {key: city[key] for key in ('slug', 'name', 'defaultFrom', 'areaKey', 'defaultMax', 'scaleMax') if key in city}
     config.update(dataVersion=short_hash(SITE / 'data' / f'{city["slug"]}.json'), railNoun=texts['rail_noun'], railStations=texts['rail_stations'], busNoun=texts['mode_bus'])
     return render(lang, city['path'], texts['map_title'].format(name=city['name']), body, config)
 

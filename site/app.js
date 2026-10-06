@@ -13,7 +13,9 @@ const GEOCODER_URL = "https://map.geoportail.lu/fulltextsearch";
 
 const DEFAULT_FROM = CITY.defaultFrom;
 const MODE_LABELS = Object.fromEntries(["train", "tram", "metro", "rer", "funicular", "cable", "ferry", "busway", "bus"].map(mode => [mode, t(`mode_${mode}`)]));
-const DEFAULT_MAX = 45;
+// Echelle des couleurs : 45 min en ville, plus longue pour le pays entier (config de la carte).
+const DEFAULT_MAX = CITY.defaultMax ?? 45;
+const SCALE_MAX = CITY.scaleMax ?? 90;
 const ISOCHRONE_OPTIONS = [15, 30, 45, 60];
 const DEFAULT_ISOCHRONES = [15, 30];
 const REACH_MINUTES = 30;
@@ -772,10 +774,18 @@ function drawCommuneNames() {
   const arrondissements = app.data.arrondissements ?? [];
   // Une commune découpée en arrondissements (Marseille) laisse la place aux noms de ses arrondissements.
   const communes = app.data.boroughs.filter((commune) => !arrondissements.some((a) => a.name.startsWith(`${commune.name} `)));
+  // Sur la carte du pays, les cent communes se chevauchent : un nom qui touche un nom déjà posé est omis.
+  ctx.font = font;
+  const placed = [];
   for (const commune of [...communes, ...arrondissements]) {
     const [x, y] = project(commune.label);
     if (x < 0 || y < 0 || x > app.size.width || y > app.size.height) continue;
-    drawHaloText((commune.short ?? commune.name).toUpperCase(), x, y, { font, color: "rgba(40, 40, 40, 0.55)", halo: "rgba(255,255,255,0.6)" });
+    const text = (commune.short ?? commune.name).toUpperCase();
+    const half = ctx.measureText(text).width / 2 + 4;
+    const box = [x - half, y - 9, x + half, y + 9];
+    if (placed.some((other) => box[0] < other[2] && box[2] > other[0] && box[1] < other[3] && box[3] > other[1])) continue;
+    placed.push(box);
+    drawHaloText(text, x, y, { font, color: "rgba(40, 40, 40, 0.55)", halo: "rgba(255,255,255,0.6)" });
   }
 }
 
@@ -1063,7 +1073,8 @@ function restoreFromUrl() {
   app.includeBus = params.get("bus") !== "0";
   $("busToggle").checked = app.includeBus;
   const max = Number(params.get("max"));
-  if (max >= 20 && max <= 90) app.maxMinutes = max;
+  if (max >= 20 && max <= SCALE_MAX) app.maxMinutes = max;
+  $("maxRange").max = String(SCALE_MAX);
   $("maxRange").value = String(app.maxMinutes);
   if (params.has("iso")) {
     app.isochrones = params
@@ -1395,7 +1406,9 @@ async function searchAddress(query) {
       const coordinates = featureCentre(feature);
       if (!coordinates) return null;
       const [lon, lat] = coordinates;
-      const layer = feature.properties?.layer_name || "";
+      // geoportail.lu mêle des noms de couches anglais et français (« nom_de_rue », « Commune »).
+      const aliases = { nom_de_rue: "street", Commune: "locality", commune: "locality", localite: "locality" };
+      const layer = aliases[feature.properties?.layer_name] || feature.properties?.layer_name || "";
       const known = ["address", "street", "locality", "lieu_dit"].includes(layer);
       return { label: feature.properties?.label || "", context: known ? t(`layer_${layer}`) : layer, point: toWorld(lat, lon) };
     })
