@@ -1,6 +1,6 @@
 {
   "city": "Luxembourg-Ville",
-  "builtAt": "2026-10-06T13:52:51+00:00",
+  "builtAt": "2026-10-06T14:37:08+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h–20h",
   "gtfs": {
@@ -177,7 +177,6 @@
       },
       {
         "name": "FUN",
-        "longName": "Funiculaire",
         "mode": "funicular",
         "color": "#009BD4",
         "stations": 2,

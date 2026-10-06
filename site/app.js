@@ -1066,6 +1066,7 @@ function syncUrl() {
   if (iso !== DEFAULT_ISOCHRONES.join(",")) params.set("iso", iso || "0");
   const query = params.toString().replaceAll("%2C", ",");
   history.replaceState(null, "", query ? `?${query}` : location.pathname);
+  for (const link of document.querySelectorAll("a[data-language]")) link.search = location.search;
 }
 
 function restoreFromUrl() {
@@ -1073,7 +1074,7 @@ function restoreFromUrl() {
   app.includeBus = params.get("bus") !== "0";
   $("busToggle").checked = app.includeBus;
   const max = Number(params.get("max"));
-  if (max >= 20 && max <= SCALE_MAX) app.maxMinutes = max;
+  if (max >= 20 && max <= SCALE_MAX && max % 5 === 0) app.maxMinutes = max;
   $("maxRange").max = String(SCALE_MAX);
   $("maxRange").value = String(app.maxMinutes);
   if (params.has("iso")) {
@@ -1401,13 +1402,13 @@ async function searchAddress(query) {
   } catch (error) {
     if (error.name === "AbortError" || !stops.length) throw error;
   }
-  const addresses = payload.features
+  const addresses = (Array.isArray(payload?.features) ? payload.features : [])
     .map((feature) => {
       const coordinates = featureCentre(feature);
       if (!coordinates) return null;
       const [lon, lat] = coordinates;
       // geoportail.lu mêle des noms de couches anglais et français (« nom_de_rue », « Commune »).
-      const aliases = { nom_de_rue: "street", Commune: "locality", commune: "locality", localite: "locality" };
+      const aliases = { Adresse: "address", nom_de_rue: "street", Rue: "street", Commune: "locality", commune: "locality", localite: "locality", "Localité": "locality" };
       const layer = aliases[feature.properties?.layer_name] || feature.properties?.layer_name || "";
       const known = ["address", "street", "locality", "lieu_dit"].includes(layer);
       return { label: feature.properties?.label || "", context: known ? t(`layer_${layer}`) : layer, point: toWorld(lat, lon) };

@@ -773,7 +773,7 @@ def add_extra_links(city: dict, complexes: List[dict], routes: Dict[str, dict], 
         a, b = ends
         route_id = link["id"]
         routes[route_id] = {"route_id": route_id, "route_short_name": link.get("short", route_id),
-                            "route_long_name": link["name"], "route_type": "7", "route_color": ""}
+                            "route_long_name": "", "route_type": "7", "route_color": ""}
         wait = round(min(MAX_WAIT, max(MIN_WAIT, link["headway"] / 2.0)), 2)
         for src, dst in ((a, b), (b, a)):
             complexes[src]["routes"].add(route_id)
