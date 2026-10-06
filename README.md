@@ -43,4 +43,4 @@ Le code original [camilleroux/montpellier-temps-transport](https://github.com/ca
 
 ## Auteur
 
-Leyukaka : [GitHub](https://github.com/Leyukaka)
+Leyukaka : [GitHub](https://github.com/Leyukaka) · [LinkedIn](https://www.linkedin.com/in/yann-badr%C3%A9-26852733/)
