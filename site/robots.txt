@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://tram.camilleroux.com/sitemap.xml
+Sitemap: https://lux-tram-range.workers.dev/sitemap.xml
