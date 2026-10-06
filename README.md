@@ -2,7 +2,7 @@
 
 Cartes des temps de trajet en train, tram, funiculaire et bus pour Luxembourg-Ville et le pays. Les bus sont inclus par défaut. Calcul dans le navigateur, sans cookies ni mesure d'audience.
 
-Site : https://lux-tram-range.workers.dev
+Site : https://lux-tram-range.yann-badre.workers.dev
 
 ## Construire, tester et publier
 

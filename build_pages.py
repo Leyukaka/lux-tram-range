@@ -10,7 +10,7 @@ from cities import load_cities
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
 SITE_NAME = 'lux-tram-range'
-SITE_URL = os.environ.get('SITE_URL', 'https://lux-tram-range.workers.dev').rstrip('/')
+SITE_URL = os.environ.get('SITE_URL', 'https://lux-tram-range.yann-badre.workers.dev').rstrip('/')
 GITHUB_URL = 'https://github.com/Leyukaka/lux-tram-range'
 LICENCES = {'cc-by': ('CC-BY 4.0', 'https://creativecommons.org/licenses/by/4.0/'), 'odbl': ('ODbL 1.0', 'https://opendatacommons.org/licenses/odbl/1-0/')}
 LANGUAGES = ('fr', 'en', 'de')
