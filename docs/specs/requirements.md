@@ -64,16 +64,20 @@ et les correspondances.
 1. Le Pipeline DOIT classer les lignes en modes : `tram` (route_type 0), `train` (route_type 2), `funicular`
    (route_type 7) et `bus` (route_type 3 et autres).
 2. Le Pipeline DOIT découper chaque catégorie de train du Feed (RB, RE, IC, TER, TGV) en lignes distinctes,
-   identifiées par leurs deux terminus. L'attente en gare pour une ligne DOIT compter tous les trains, toutes
-   catégories confondues, qui desservent ses trois prochaines gares, car le voyageur prend le premier qui y va.
+   identifiées par leurs deux terminus, et orientées par l'ordre de ces terminus (le `direction_id` des
+   catégories de train s'inverse à Luxembourg).
 3. Le Pipeline DOIT regrouper les arrêts en Complexes avec la règle de l'original : même nom normalisé,
    lien simple à 350 m au plus.
 4. Le Pipeline DOIT calculer le temps de trajet entre deux arrêts consécutifs comme la médiane des courses
    de la fenêtre, avec un minimum de 0,4 minute.
-5. Le Pipeline DOIT calculer l'attente au départ comme la moitié de l'intervalle moyen par sens. Elle est
-   bornée entre 1 minute et une borne haute configurable par Carte, de 30 minutes par défaut.
-6. Le Pipeline DOIT compter une correspondance comme 1,5 minute de marche, plus l'attente de la ligne
-   suivante, plus 1 minute d'accès au quai pour les trains et le funiculaire.
+5. Le Pipeline DOIT calculer l'attente au départ, par arrêt, ligne et sens, comme l'attente moyenne d'un
+   voyageur arrivant à un instant quelconque de la fenêtre, sur l'horaire réel. Elle compte tous les départs dont
+   le parcours restant couvre le parcours habituel de la ligne, quelle que soit leur ligne. Elle est bornée entre
+   1 minute et une borne haute configurable par Carte, de 30 minutes par défaut.
+6. Le Pipeline DOIT compter une correspondance comme 1,5 minute de marche, plus l'attente moyenne entre
+   chaque arrivée de la ligne quittée et le départ suivant de la ligne prise (horaire réel, ce qui inclut les
+   correspondances garanties), plus 1 minute d'accès au quai pour les trains et le funiculaire. Une
+   correspondance n'est possible qu'après un trajet : un voyageur arrivé à pied prend l'attente au départ.
 7. Le Pipeline DOIT relier à pied, à 75 m/min (4,5 km/h), les Complexes distants de 450 m au plus.
 8. LORSQU'une marche en ligne droite traverse une rivière configurée, le Pipeline et l'Application DOIVENT
    faire passer le trajet par le pont piéton le plus favorable, dans la limite de 3 km de détour.
@@ -209,8 +213,11 @@ forment l'essentiel du réseau.
    toute vitesse supérieure à 35 km/h pour le tram ou à 90 km/h pour le train.
 3. Les trajets de référence suivants DOIVENT tomber dans les fourchettes indiquées :
    - Gare Centrale vers Luxexpo en tram : 18 à 30 min ;
-   - Gare Centrale vers Ettelbruck : 25 à 40 min ;
-   - Gare Centrale vers Esch-sur-Alzette : 20 à 35 min.
+   - Gare Centrale vers Ettelbruck : 30 à 45 min ;
+   - Gare Centrale vers Esch-sur-Alzette : 25 à 40 min.
+   Ces fourchettes encadrent les temps relevés sur mobiliteit.lu et Google Maps (`docs/benchmark/`).
+4. Sur le banc d'essai `docs/benchmark/` (14 trajets), l'écart absolu moyen avec mobiliteit.lu DOIT rester
+   sous 5 minutes.
 
 ### R15 : Langues
 

@@ -161,9 +161,20 @@ Les couleurs reprennent les codes visuels publics des opérateurs, sans logo.
   - Le `route_id` synthétique et `routeInfo.name` valent par exemple "RE Luxembourg - Troisvierges".
   - Les branches à moins de 4 courses dans la fenêtre sont rattachées à la branche la plus proche, celle
     qui partage le plus d'arrêts, pour éviter les attentes plafonnées artificiellement.
-- `shared_train_waits` : l'attente d'une ligne de train à une gare vaut la moitié de l'intervalle entre les
-  trains (toutes lignes confondues) qui partent de cette gare et desservent ses 3 prochaines gares. Sans cette
-  règle, le découpage par terminus donnait Gare Centrale vers Ettelbruck en 42 min au lieu de 35.
+- `Timetable` : départs et arrivées de la journée par arrêt, ligne et sens.
+  - Attente au départ : attente moyenne pour une arrivée uniforme dans la fenêtre, sur les départs regroupés. Un
+    départ d'une autre ligne compte s'il dessert tous les arrêts restants du parcours habituel (le plus fréquent)
+    de la ligne : plusieurs bus sur le même tronc, ou IC et RE vers le nord, mais pas un RB vers Diekirch pour un
+    train vers Troisvierges.
+  - Attente de correspondance : moyenne, sur les arrivées de la ligne quittée, du temps jusqu'au prochain départ
+    regroupé de la ligne prise. Les correspondances garanties (trains séparés à Kautenbach) prennent leur vraie
+    attente courte.
+- Graphe : deux états par arrêt, ligne et sens. L'état « montée » reçoit les voyageurs à pied et les
+  correspondances ; l'état « descente » n'est atteint qu'en roulant et seul il ouvre les correspondances. Il porte
+  une attente de 99 min pour ne jamais servir de départ.
+- Élagage des correspondances à pied : pas de marche vers un arrêt voisin pour une ligne qui passe déjà là, ni
+  depuis une ligne qui dessert aussi l'arrêt voisin.
+- Résultat sur le banc d'essai (`docs/benchmark/`) : écart absolu moyen de 6,1 à 3,3 min avec mobiliteit.lu.
 - `extra_links(config, complexes)` : chaque lien crée une ligne synthétique à deux arrêts, avec deux arêtes
   de trajet (aller et retour) et une attente `clamp(headway/2)`.
 - `MAX_WAIT` est lu depuis `config.maxWait`, `GRID_CELL_METERS` depuis `config.gridCellMeters`.

@@ -26,51 +26,50 @@ node tools/compare_trips.mjs
 ## Résultats
 
 Minutes porte à porte, fenêtre 8 h 00 - 8 h 30. L'écart est carte moins référence : positif quand la carte est
-plus pessimiste.
+plus pessimiste. « Avant » est le modèle de l'original (moitié de l'intervalle par ligne), « après » le modèle
+actuel (attentes tirées de l'horaire, voir plus bas).
 
-| Trajet | Carte | mobiliteit.lu | écart | Google | écart |
-|---|---:|---:|---:|---:|---:|
-| Gare Centrale - Kirchberg, Luxexpo | 26 | 22 | +5 | 26 | 0 |
-| Gare Centrale - Hamilius | 8 | 8 | 0 | 10 | -1 |
-| Gare Centrale - Gasperich, Cloche d'Or | 18 | 17 | +1 | 17 | +1 |
-| Kirchberg, Philharmonie - Belair, Sacré-Coeur | 26 | 20 | +6 | 22 | +4 |
-| Gare Centrale - Esch-sur-Alzette | 35 | 33 | +2 | 35 | -1 |
-| Gare Centrale - Mersch | 29 | 25 | +4 | 28 | +1 |
-| Gare Centrale - Ettelbruck | 40 | 39 | 0 | 43 | -4 |
-| Gare Centrale - Clervaux | 64 | 73 | -9 | 75 | -11 |
-| Gare Centrale - Wiltz | 96 | 74 | +23 | 76 | +21 |
-| Gare Centrale - Echternach | 83 | 70 | +13 | 79 | +4 |
-| Gare Centrale - Remich | 54 | 51 | +3 | 53 | +1 |
-| Gare Centrale - Vianden | 84 | 79 | +5 | 92 | -7 |
-| Esch-sur-Alzette - Belval-Université | 15 | 9 | +6 | 11 | +4 |
-| Ettelbruck - Diekirch | 22 | 14 | +8 | 14 | +8 |
+| Trajet | mobiliteit.lu | Google | Carte avant | Carte après |
+|---|---:|---:|---:|---:|
+| Gare Centrale - Kirchberg, Luxexpo | 22 | 26 | 26 | 26 |
+| Gare Centrale - Hamilius | 8 | 10 | 8 | 8 |
+| Gare Centrale - Gasperich, Cloche d'Or | 17 | 17 | 18 | 18 |
+| Kirchberg, Philharmonie - Belair, Sacré-Coeur | 20 | 22 | 26 | 23 |
+| Gare Centrale - Esch-sur-Alzette | 33 | 35 | 35 | 36 |
+| Gare Centrale - Mersch | 25 | 28 | 29 | 26 |
+| Gare Centrale - Ettelbruck | 39 | 43 | 40 | 44 |
+| Gare Centrale - Clervaux | 73 | 75 | 64 | 69 |
+| Gare Centrale - Wiltz | 74 | 76 | 96 | 74 |
+| Gare Centrale - Echternach | 70 | 79 | 83 | 75 |
+| Gare Centrale - Remich | 51 | 53 | 54 | 56 |
+| Gare Centrale - Vianden | 79 | 92 | 84 | 78 |
+| Esch-sur-Alzette - Belval-Université | 9 | 11 | 15 | 16 |
+| Ettelbruck - Diekirch | 14 | 14 | 22 | 22 |
 
-| Référence | Écart moyen | Écart absolu moyen |
-|---|---:|---:|
-| mobiliteit.lu | +4,8 min | 6,1 min |
-| Google Maps | +1,4 min | 4,9 min |
+| Référence | Avant : écart moyen | Avant : écart absolu | Après : écart moyen | Après : écart absolu |
+|---|---:|---:|---:|---:|
+| mobiliteit.lu | +4,8 min | 6,1 min | +2,6 min | 3,3 min |
+| Google Maps | +1,4 min | 4,9 min | -0,8 min | 3,5 min |
 
-Sur 10 trajets sur 14, la carte est à 5 minutes près des deux calculateurs.
+## Ce qui a changé dans le modèle
 
-## Écarts expliqués
+Le premier relevé montrait deux limites du modèle de l'original. Elles sont corrigées :
 
-- **Correspondances cadencées (Wiltz, +23).** Les trains pour Wiltz se séparent à Kautenbach : le changement est
-  garanti, sans attente. Le modèle ne connaît que la fréquence de la navette Kautenbach - Wiltz et compte
-  l'attente moyenne, plafonnée à 30 minutes.
-- **Plusieurs lignes pour un même trajet (Philharmonie - Belair, Esch - Belval, Ettelbruck - Diekirch).** Le
-  voyageur prend le premier bus ou train qui va à destination, quelle que soit la ligne. Le modèle compte
-  l'attente d'une seule ligne : il surestime l'attente sur les trajets courts desservis par plusieurs lignes.
-  C'est la principale cause de l'écart moyen positif.
-- **Clervaux (-9).** Le modèle est plus optimiste : il suppose des départs réguliers, alors que l'horaire réel
-  de la fenêtre laisse un trou entre deux trains.
-- **Echternach (+13 avec mobiliteit.lu, +4 avec Google).** mobiliteit.lu trouve un trajet en bus direct plus
-  rapide. Le modèle passe par le tram et une ligne RGTR, avec deux attentes moyennes.
-- **Gare - Luxexpo (+5 avec mobiliteit.lu).** mobiliteit.lu propose le train jusqu'à Pfaffenthal-Kirchberg puis
-  le funiculaire et le tram (17 min). Le modèle et Google restent sur le tram direct (25 min).
+- **Plusieurs lignes pour un même trajet.** L'attente au départ est calculée sur l'horaire réel et compte tous les
+  véhicules qui desservent les mêmes arrêts que le parcours habituel de la ligne (plusieurs bus sur un même tronc,
+  IC et RE vers le nord). Un train qui ne va pas aussi loin, comme un RB vers Diekirch pour un voyageur vers
+  Clervaux, ne compte pas.
+- **Correspondances garanties.** L'attente de correspondance est la moyenne, sur les arrivées de la ligne quittée,
+  du temps jusqu'au départ suivant de la ligne prise. Les trains qui se séparent à Kautenbach ne coûtent plus
+  30 minutes d'attente : Gare - Wiltz passe de +23 à 0 minute d'écart.
+- Une correspondance n'est possible qu'après un trajet : un voyageur qui arrive à pied à un arrêt ne profite pas
+  d'une correspondance calée sur un bus qu'il n'a pas pris.
 
-## Pistes d'amélioration
+## Écarts restants
 
-- Attente commune à plusieurs lignes : compter, pour une paire d'arrêts, tous les passages qui y mènent (le
-  « common lines problem »), comme `shared_train_waits` le fait déjà pour les trains.
-- Correspondances garanties : utiliser `block_id` ou `transfers.txt` du GTFS pour ne pas compter d'attente
-  quand un train continue sous un autre numéro ou se sépare.
+- **Trajets courts à plusieurs modes (Esch - Belval, Ettelbruck - Diekirch, +6 à +8).** Le train et plusieurs bus
+  y vont, mais leurs parcours diffèrent : le modèle ne les regroupe pas et attend une seule ligne.
+- **Vianden (-14 avec Google).** Google ne propose pas de départ entre 8 h 14 et 9 h 14 ; mobiliteit.lu, qui
+  utilise le même GTFS que la carte, est à 1 minute.
+- **Gare - Luxexpo (+5 avec mobiliteit.lu).** mobiliteit.lu propose le train jusqu'à Pfaffenthal-Kirchberg puis le
+  funiculaire et le tram (17 min). Le modèle et Google restent sur le tram direct.
