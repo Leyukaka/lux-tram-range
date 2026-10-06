@@ -13,7 +13,7 @@ SITE_NAME = 'lux-tram-range'
 SITE_URL = os.environ.get('SITE_URL', 'https://tram.monbot.si').rstrip('/')
 GITHUB_URL = 'https://github.com/Leyukaka/lux-tram-range'
 # Author links shown in the footer and the legal page (an empty link is left out).
-AUTHOR = {'name': 'Leyukaka', 'GitHub': 'https://github.com/Leyukaka', 'LinkedIn': 'https://www.linkedin.com/in/yann-badr%C3%A9-26852733/'}
+AUTHOR = {'name': 'Badré Yann', 'GitHub': 'https://github.com/Leyukaka', 'LinkedIn': 'https://www.linkedin.com/in/yann-badr%C3%A9-26852733/'}
 LICENCES = {'cc-by': ('CC-BY 4.0', 'https://creativecommons.org/licenses/by/4.0/'), 'odbl': ('ODbL 1.0', 'https://opendatacommons.org/licenses/odbl/1-0/')}
 LANGUAGES = ('fr', 'en', 'de')
 esc = html.escape
