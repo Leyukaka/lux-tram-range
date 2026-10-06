@@ -241,3 +241,20 @@ forment l'essentiel du réseau.
 5. Le README et le pied de page DOIVENT indiquer que les traductions sont des premières versions et que
    les contributions sont bienvenues, en particulier pour le luxembourgeois.
 6. Les pages DOIVENT déclarer `lang` et des liens `hreflang` entre les versions.
+
+### R16 : Sécurité
+
+Revue OWASP du 2026-10-06 (deux revues indépendantes, en lecture seule). Aucune XSS ni redirection ouverte trouvée.
+
+1. Le site DOIT envoyer une CSP sans script inline (`script-src 'self'`), avec `connect-src` limité au site et
+   à geoportail.lu, `frame-ancestors 'none'`, ainsi que `X-Content-Type-Options`, `X-Frame-Options`,
+   `Referrer-Policy: no-referrer`, `Permissions-Policy` (géolocalisation pour le site seul) et HSTS (`site/_headers`).
+2. Les données externes (geocoder, noms GTFS, paramètres d'URL) DOIVENT atteindre le DOM par `textContent` ou le
+   canvas, jamais par du HTML. Seuls les textes `credits` et `legal_text` des traductions sont du HTML.
+3. Une couleur du GTFS qui n'est pas un code hexadécimal à 6 chiffres DOIT être remplacée par le gris par défaut.
+4. Le paramètre `iso` DOIT être dédoublonné et limité aux valeurs proposées.
+5. La recherche d'adresse DOIT partir sans en-tête Referer ni cookies ; les liens partagés arrondissent les
+   positions à 4 décimales (environ 10 m).
+6. Le Pipeline DOIT refuser une ressource GTFS hors de `https://download.data.public.lu/` et toute redirection
+   qui quitte HTTPS.
+7. Le déploiement DOIT utiliser une version épinglée de Wrangler.

@@ -33,6 +33,10 @@ def bbox(values) -> str:
 def download(url: str, data: bytes | None = None) -> bytes:
     request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request, timeout=300) as response:
+        # urllib follows redirects: refuse one that leaves HTTPS. (The checksum published by data.public.lu is a
+        # multipart S3 ETag, not a digest of the file, so it cannot be checked; the SHA-256 is recorded instead.)
+        if not response.geturl().startswith("https://"):
+            raise RuntimeError(f"Download left HTTPS: {url} -> {response.geturl()}")
         return response.read()
 
 
@@ -85,6 +89,9 @@ def fetch_gtfs(city: dict) -> None:
     if city.get("gtfsResolve") == "udata":
         resource = latest_udata_resource(city["gtfsApi"])
         url = resource["url"]
+        # The API answer is data: only an HTTPS download from the portal is followed (no file:, ftp: or other host).
+        if not url.startswith("https://download.data.public.lu/"):
+            raise RuntimeError(f"Unexpected GTFS resource URL: {url}")
         manifest_path = out / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
         known = manifest.get("gtfs.zip", {})

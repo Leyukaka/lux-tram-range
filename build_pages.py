@@ -36,23 +36,23 @@ def path_for(lang, page=''):
 def render(lang, page, title, body, config=None):
     texts = translations(lang)
     # The 404 page is served for any missing URL: no canonical nor alternates, and kept out of the index.
-    alternates = '' if page == '404.html' else ''.join(f'<link rel="alternate" hreflang="{code}" href="{SITE_URL}{path_for(code, page)}">' for code in LANGUAGES)
-    seo = '<meta name="robots" content="noindex">' if page == '404.html' else f'<link rel="canonical" href="{SITE_URL}{path_for(lang, page)}">'
+    alternates = '' if page == '404.html' else ''.join(f'<link rel="alternate" hreflang="{code}" href="{esc(SITE_URL + path_for(code, page))}">' for code in LANGUAGES)
+    seo = '<meta name="robots" content="noindex">' if page == '404.html' else f'<link rel="canonical" href="{esc(SITE_URL + path_for(lang, page))}">'
     switch = ' '.join(f'<a data-language href="{path_for(code, page)}" lang="{code}" hreflang="{code}"{' aria-current="page"' if code == lang else ''}>{code.upper()}</a>' for code in LANGUAGES)
     head = f'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{esc(title)}</title><meta name="description" content="{esc(texts["description"])}">{seo}{alternates}<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v={short_hash(SITE / "styles.css")}">'
     header = f'<header class="site-header"><a href="{path_for(lang)}">{esc(texts["site_title"])}</a><nav aria-label="{esc(texts["languages"])}">{switch}</nav></header>'
-    footer = f'<footer class="site-footer"><p><a href="{path_for(lang, "mentions-legales/")}">{esc(texts["legal_title"])}</a> · <a href="{GITHUB_URL}">{esc(texts["source_code"])}</a></p><p>{texts["credits"]}</p><p>{texts["translation_notice"]}</p></footer>'
+    footer = f'<footer class="site-footer"><p><a href="{path_for(lang, "mentions-legales/")}">{esc(texts["legal_title"])}</a> · <a href="{GITHUB_URL}">{esc(texts["source_code"])}</a></p><p>{texts["credits"]}</p><p>{esc(texts["translation_notice"])}</p></footer>'
     blob = json.dumps({'fallback': translations('fr'), 'messages': texts}, ensure_ascii=False).replace('</', '<\\/')
     scripts = f'<script id="i18n" type="application/json">{blob}</script>'
     if config:
         scripts += '<script id="city-config" type="application/json">' + json.dumps(config, ensure_ascii=False).replace('</', '<\\/') + '</script>'
         scripts += f'<script type="module" src="/app.js?v={short_hash(SITE / "app.js")}"></script>'
     # Language links carry the map state (also for copy link and open in a new tab); app.js refreshes them.
-    scripts += '<script>document.querySelectorAll("a[data-language]").forEach(a=>{a.search=location.search;});</script>'
+    scripts += f'<script src="/lang.js?v={short_hash(SITE / "lang.js")}"></script>'
     return f'<!doctype html><html lang="{lang}"><head>{head}</head><body>{header}<main class="page">{body}</main>{footer}{scripts}</body></html>'
 
 def faq(texts, sources=None):
-    content = ''.join(f'<details class="faq"><summary>{esc(texts[key + "_q"])}</summary><p>{texts[key + "_a"]}</p></details>' for key in ('method', 'bus', 'sources', 'limits'))
+    content = ''.join(f'<details class="faq"><summary>{esc(texts[key + "_q"])}</summary><p>{esc(texts[key + "_a"])}</p></details>' for key in ('method', 'bus', 'sources', 'limits'))
     if sources:
         gtfs = sources['gtfs']
         period = gtfs.get('servicePeriod') or []
@@ -89,7 +89,7 @@ def main():
     urls = []
     for lang in LANGUAGES:
         texts = translations(lang)
-        pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{texts["licences"]}</p></section>')}
+        pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{esc(texts["licences"])}</p></section>')}
         for city in cities:
             pages[city['path']] = render_city(city, cities, lang)
         for page, content in pages.items():

@@ -934,6 +934,9 @@ def extract_network(gtfs_path: Path, city: dict):
             colors.get(short) or colors.get(route_id) or mode_colors.get(mode)
             or agency_colors.get(row.get("agency_id", "")) or (row.get("route_color") or "").strip() or "#888888"
         ).lstrip("#")
+        # A colour from the feed lands in a style attribute: anything but six hex digits is dropped (A03).
+        if not re.fullmatch(r"[0-9A-Fa-f]{6}", color):
+            color = "888888"
         route_info[route_id] = {
             "mode": mode,
             "rail": mode in RAIL_MODES,

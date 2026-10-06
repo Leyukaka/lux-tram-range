@@ -1084,7 +1084,7 @@ function updateLegend() {
 
 function formatPair(point) {
   const { lat, lon } = toLatLon(point);
-  return `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  return `${lat.toFixed(4)},${lon.toFixed(4)}`;
 }
 
 function parsePair(value) {
@@ -1118,11 +1118,7 @@ function restoreFromUrl() {
   $("maxRange").max = String(SCALE_MAX);
   $("maxRange").value = String(app.maxMinutes);
   if (params.has("iso")) {
-    app.isochrones = params
-      .get("iso")
-      .split(",")
-      .map(Number)
-      .filter((value) => ISOCHRONE_OPTIONS.includes(value));
+    app.isochrones = [...new Set(params.get("iso").split(",").map(Number))].filter((value) => ISOCHRONE_OPTIONS.includes(value));
   }
   for (const input of $("isoToggles").querySelectorAll("input")) input.checked = app.isochrones.includes(Number(input.value));
   updateLegend();
@@ -1443,7 +1439,7 @@ async function searchAddress(query) {
   const params = new URLSearchParams({ query, limit: "6" });
   let payload = { features: [] };
   try {
-    const response = await fetch(`${GEOCODER_URL}?${params}`, { signal: searchController.signal });
+    const response = await fetch(`${GEOCODER_URL}?${params}`, { signal: searchController.signal, referrerPolicy: "no-referrer", credentials: "omit" });
     payload = await response.json();
   } catch (error) {
     if (error.name === "AbortError" || !stops.length) throw error;
@@ -1455,7 +1451,8 @@ async function searchAddress(query) {
       const [lon, lat] = coordinates;
       // geoportail.lu mêle des noms de couches anglais et français (« nom_de_rue », « Commune »).
       const aliases = { Adresse: "address", nom_de_rue: "street", Rue: "street", Commune: "locality", commune: "locality", localite: "locality", "Localité": "locality" };
-      const layer = aliases[feature.properties?.layer_name] || feature.properties?.layer_name || "";
+      const name = feature.properties?.layer_name || "";
+      const layer = Object.hasOwn(aliases, name) ? aliases[name] : name;
       const known = ["address", "street", "locality", "lieu_dit"].includes(layer);
       return { label: feature.properties?.label || "", context: known ? t(`layer_${layer}`) : layer, point: toWorld(lat, lon) };
     })

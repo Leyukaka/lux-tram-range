@@ -10,8 +10,8 @@ Python 3 et Node.js sont nécessaires. Le pipeline Python utilise la bibliothèq
 
 ```sh
 python build.py --fetch
-npx wrangler dev
-npx wrangler deploy
+npx wrangler@4.147.0 dev
+npx wrangler@4.147.0 deploy
 ```
 
 Pour régénérer seulement les pages après une modification des textes : `python build_pages.py`.
