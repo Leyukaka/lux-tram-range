@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Download the raw sources of a city into data/<city>/.
+"""Download the raw sources of a map into data/<slug>/ (the GTFS into data/<gtfsDir>/, shared between maps).
 
-Usage: python3 fetch_data.py <city> [--gtfs-only | --context-only | --rivers-only]
+Usage: python3 fetch_data.py <slug> [--gtfs-only | --osm-only | --rivers-only]
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 from cities import load_city
 
 ROOT = Path(__file__).resolve().parent
-USER_AGENT = "tram.camilleroux.com/0.2 (build script)"
+USER_AGENT = "lux-tram-range (build script; https://github.com/Leyukaka/lux-tram-range)"
 OVERPASS_URLS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
@@ -47,54 +47,81 @@ def overpass(query: str) -> bytes:
             except Exception as error:  # noqa: BLE001 - Overpass is often busy, just retry
                 print(f"  {url} failed ({error}), retrying…")
         time.sleep(10 * (attempt + 1))
-    raise RuntimeError("Overpass unavailable")
+    raise RuntimeError(f"Overpass unavailable for: {query[:120]}")
 
 
-def record(out: Path, name: str, source: str, how: str = "download") -> None:
-    """Note in data/<city>/manifest.json where each raw file comes from and when it was fetched."""
+def record(out: Path, name: str, source: str, how: str = "download", extra: dict | None = None) -> None:
+    """Note in <dir>/manifest.json where each raw file comes from and when it was fetched."""
     manifest_path = out / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
     path = out / name
-    fetched = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc) if how == "manual" else datetime.now(timezone.utc)
     manifest[name] = {
         "source": source,
         "how": how,
-        "fetchedAt": fetched.isoformat(timespec="seconds"),
+        "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "bytes": path.stat().st_size,
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        **(extra or {}),
     }
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def fetch_context(city: dict, out: Path) -> None:
-    """Land around the metropolis, for coastal cities: whatever is left uncovered on the map is drawn as sea."""
-    departments = city.get("seaDepartments", [])
-    if departments:
-        print(f"Communes voisines (départements {', '.join(departments)})…")
-        features = []
-        urls = []
-        for code in departments:
-            url = f"https://geo.api.gouv.fr/departements/{code}/communes?fields=nom,code&format=geojson&geometry=contour"
-            features += json.loads(download(url))["features"]
-            urls.append(url)
-        (out / "context.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": features}), encoding="utf-8")
-        record(out, "context.geojson", " + ".join(urls))
-    relations = city.get("contextOsmRelations", [])
-    if relations:
-        print("Territoires voisins hors de France (OSM)…")
-        query = "[out:json][timeout:110];(" + "".join(f"relation({rel});" for rel in relations) + ");out geom;"
-        (out / "context_osm.json").write_bytes(overpass(query))
-        record(out, "context_osm.json", f"Overpass API: {query}")
+def latest_udata_resource(api_url: str) -> dict:
+    """data.public.lu (udata) publishes each weekly GTFS as a new resource of the dataset: take the newest zip."""
+    dataset = json.loads(download(api_url))
+    resources = [
+        resource for resource in dataset.get("resources", [])
+        if (resource.get("format") or "").lower() == "zip" or resource.get("url", "").lower().endswith(".zip")
+    ]
+    if not resources:
+        raise RuntimeError(f"No GTFS zip in {api_url}")
+    return max(resources, key=lambda resource: resource.get("last_modified") or resource.get("created_at") or "")
+
+
+def fetch_gtfs(city: dict) -> None:
+    out = ROOT / "data" / city["gtfsDir"]
+    out.mkdir(parents=True, exist_ok=True)
+    print(f"GTFS {city['network']}…")
+    if city.get("gtfsResolve") == "udata":
+        resource = latest_udata_resource(city["gtfsApi"])
+        url = resource["url"]
+        manifest_path = out / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        if (out / "gtfs.zip").exists() and manifest.get("gtfs.zip", {}).get("source") == url:
+            print(f"  déjà à jour ({resource.get('title')})")
+            return
+        print(f"  {resource.get('title')} ({resource.get('last_modified')})")
+        (out / "gtfs.zip").write_bytes(download(url))
+        record(out, "gtfs.zip", url, extra={"resource": resource.get("title"), "lastModified": resource.get("last_modified")})
+    else:
+        (out / "gtfs.zip").write_bytes(download(city["gtfsUrl"]))
+        record(out, "gtfs.zip", city["gtfsUrl"])
+
+
+def fetch_communes(city: dict, out: Path) -> None:
+    """Communes of Luxembourg: OSM administrative boundaries (admin_level 8), with their full geometry."""
+    print("Communes (OSM)…")
+    query = (
+        '[out:json][timeout:180];area["ISO3166-1"="LU"][admin_level=2]->.lu;'
+        'relation(area.lu)["boundary"="administrative"]["admin_level"="8"];out geom;'
+    )
+    body = overpass(query)
+    count = len(json.loads(body)["elements"])
+    if count < 90:
+        raise RuntimeError(f"Only {count} communes returned by Overpass, expected about 100")
+    (out / "osm_communes.json").write_bytes(body)
+    record(out, "osm_communes.json", f"Overpass API: {query}")
 
 
 def fetch_rivers(city: dict, out: Path) -> None:
-    """Rivers crossed on foot only by a bridge (`"rivers"`: names, and their « La Loire - Bras de Pirmil » parts)."""
+    """Rivers crossed on foot only by a bridge (`"rivers"`: names; `"riverWaterways"`: OSM waterway values)."""
     if not city.get("rivers"):
         return
     print("Cours d'eau (OSM)…")
     names = "|".join(re.escape(name) for name in city["rivers"])
+    waterways = "|".join(city.get("riverWaterways", ["river"]))
     query = (
-        f'[out:json][timeout:110];way["waterway"="river"]["name"~"^({names})( - .*)?$"]["tunnel"!~"."]'
+        f'[out:json][timeout:110];way["waterway"~"^({waterways})$"]["name"~"^({names})( - .*)?$"]["tunnel"!~"."]'
         f'({bbox(city["osmBbox"])});out geom;'
     )
     (out / "osm_rivers.json").write_bytes(overpass(query))
@@ -109,49 +136,7 @@ def fetch_rivers(city: dict, out: Path) -> None:
     record(out, "osm_bridges.json", f"Overpass API: {query}")
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        sys.exit(__doc__)
-    city = load_city(sys.argv[1])
-    out = ROOT / "data" / city["slug"]
-    out.mkdir(parents=True, exist_ok=True)
-    if "--context-only" in sys.argv:
-        fetch_context(city, out)
-        return
-    if "--rivers-only" in sys.argv:
-        fetch_rivers(city, out)
-        return
-
-    print(f"GTFS {city['network']}…")
-    if city.get("gtfsManual"):
-        # Some operators (TCL on data.grandlyon.com) require an account: the file is downloaded by hand.
-        if not (out / "gtfs.zip").exists():
-            sys.exit(f"Téléchargez le GTFS à la main ({city['gtfsManual']}) et posez-le dans {out / 'gtfs.zip'}")
-        print(f"  fichier manuel conservé ({city['gtfsManual']})")
-        record(out, "gtfs.zip", city["gtfsUrl"], how="manual")
-    else:
-        (out / "gtfs.zip").write_bytes(download(city["gtfsUrl"]))
-        record(out, "gtfs.zip", city["gtfsUrl"])
-    if "--gtfs-only" in sys.argv:
-        return
-
-    print(f"Communes de {city['metropole']}…")
-    communes_url = f"https://geo.api.gouv.fr/epcis/{city['epci']}/communes?fields=nom,code&format=geojson&geometry=contour"
-    (out / "communes.geojson").write_bytes(download(communes_url))
-    record(out, "communes.geojson", communes_url)
-    if city.get("arrondissements"):
-        print("Arrondissements municipaux…")
-        url = (f"https://geo.api.gouv.fr/communes?type=arrondissement-municipal&codeParent={city['arrondissements']}"
-               "&fields=nom,code&format=geojson&geometry=contour")
-        (out / "arrondissements.geojson").write_bytes(download(url))
-        record(out, "arrondissements.geojson", url)
-
-    if city.get("railGeometry") == "osm":
-        print("Tracés des lignes (OSM)…")
-        query = f'[out:json][timeout:110];relation["route"~"^(tram|subway|light_rail|funicular)$"]({bbox(city["osmRailBbox"])});out geom;'
-        (out / "osm_rail.json").write_bytes(overpass(query))
-        record(out, "osm_rail.json", f"Overpass API: {query}")
-
+def fetch_water_parks(city: dict, out: Path) -> None:
     print("Eau et parcs (OSM)…")
     area, parks = bbox(city["osmBbox"]), bbox(city["parksBbox"])
     query = (
@@ -164,8 +149,24 @@ def main() -> None:
     )
     (out / "osm_water_parks.json").write_bytes(overpass(query))
     record(out, "osm_water_parks.json", f"Overpass API: {query}")
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    city = load_city(sys.argv[1])
+    out = ROOT / "data" / city["slug"]
+    out.mkdir(parents=True, exist_ok=True)
+    if "--rivers-only" in sys.argv:
+        fetch_rivers(city, out)
+        return
+    if "--osm-only" not in sys.argv:
+        fetch_gtfs(city)
+    if "--gtfs-only" in sys.argv:
+        return
+    fetch_communes(city, out)
+    fetch_water_parks(city, out)
     fetch_rivers(city, out)
-    fetch_context(city, out)
 
 
 if __name__ == "__main__":
