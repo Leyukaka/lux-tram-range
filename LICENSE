@@ -1,6 +1,7 @@
-Code (scripts Python, site/app.js, site/styles.css, modèles de pages) — licence MIT
+Code (scripts Python, site/app.js, site/styles.css, modèles de pages)  : licence MIT
 
 Copyright (c) 2026 Camille Roux
+Copyright (c) 2026 Leyukaka
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +23,11 @@ SOFTWARE.
 
 ---
 
-Données calculées (site/data/*.json, sources/*.json) — Open Database License (ODbL) 1.0
+Données calculées (site/data/*.json, sources/*.json) : ODbL 1.0
 
-Ces fichiers sont des bases de données dérivées des horaires GTFS des réseaux de transport
-(Licence Ouverte, ODbL ou Licence Mobilités selon les réseaux), d'OpenStreetMap (ODbL,
-© contributeurs OpenStreetMap) et des contours communaux de geo.api.gouv.fr (Licence Ouverte).
-Ils sont mis à disposition sous ODbL 1.0 : https://opendatacommons.org/licenses/odbl/1-0/
-La source de chaque fichier, sa date de téléchargement et sa licence sont indiquées dans
-sources/<ville>.json et sur la page « Mentions légales et licences » du site.
+© contributeurs OpenStreetMap, https://www.openstreetmap.org/copyright
+GTFS : Administration des transports publics (ATP), data.public.lu, CC-BY 4.0
+https://creativecommons.org/licenses/by/4.0/
+Les bases dérivées sont publiées sous ODbL 1.0 :
+https://opendatacommons.org/licenses/odbl/1-0/
+La provenance figure dans sources/<slug>.json.
