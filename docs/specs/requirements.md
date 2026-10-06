@@ -8,7 +8,8 @@ licence MIT pour le code, ODbL pour les données calculées).
 
 Le site redessine un territoire selon le temps de trajet en transports en commun depuis un point
 de départ : une carte de chaleur, des courbes isochrones à 15 et 30 minutes, et l'itinéraire vers
-un point d'arrivée choisi d'un clic. Deux cartes sont proposées : Luxembourg-Ville et le pays entier.
+un point d'arrivée choisi d'un clic. Une seule carte couvre le pays entier ; elle s'ouvre sur
+Luxembourg-Ville et se dézoome jusqu'au pays.
 
 Le portage suit le fonctionnement de l'original. Les écarts sont limités à ce qu'impose le contexte
 luxembourgeois et sont listés dans `design.md`.
@@ -17,7 +18,8 @@ luxembourgeois et sont listés dans `design.md`.
 
 - **Feed** : le GTFS national publié par l'Administration des transports publics (ATP) sur
   data.public.lu, licence CC-BY. Il couvre AVL, CFL (train et bus), Luxtram, RGTR et TICE.
-- **Carte** : une configuration de `cities/<slug>.json`. Deux cartes : `luxembourg-ville` et `luxembourg`.
+- **Carte** : la configuration `cities/luxembourg.json` (pays entier). Une seule Carte depuis le 2026-10-06
+  (les cartes `luxembourg-ville` et `luxembourg` ont été fusionnées).
 - **Complexe** : un regroupement d'arrêts du Feed portant le même nom normalisé et proches de 350 m au plus.
 - **Ferré** : les modes tram, train et funiculaire.
 - **Jour de référence** : le jour ouvré dont les horaires servent au calcul.
@@ -88,12 +90,11 @@ et les correspondances.
 
 ### R4 : Emprise et grille
 
-**User story :** en tant qu'utilisateur, je veux voir soit la ville en détail, soit le pays entier.
+**User story :** en tant qu'utilisateur, je veux une seule carte, détaillée en ville et couvrant le pays.
 
-1. La Carte `luxembourg-ville` DOIT couvrir la commune de Luxembourg avec une grille de 200 m.
-2. La Carte `luxembourg` DOIT couvrir les 100 communes du pays. Sa maille DOIT être choisie pour que
-   `site/data/luxembourg.json` reste sous 20 Mo non compressé et sous 4 Mo compressé en gzip. Le fichier de
-   Paris de l'original pèse 13 Mo.
+1. La Carte DOIT couvrir les 100 communes du pays avec une grille de 200 m partout.
+2. `site/data/luxembourg.json` DOIT rester sous 24 Mo non compressé (limite de 25 Mio par fichier des Workers)
+   et sous 5 Mo compressé en gzip. Le Pipeline DOIT pour cela écrire un format compact (voir design.md).
 3. Le Pipeline DOIT exclure de la grille les cellules hors des communes et celles sur une étendue d'eau
    de plus de 1 km².
 4. Pour chaque cellule, le Pipeline DOIT précalculer les 5 arrêts les plus proches et les 3 gares ou
@@ -105,7 +106,8 @@ et les correspondances.
 position.
 
 1. Au chargement sans paramètre, l'Application DOIT placer le départ sur le point `defaultFrom` de la
-   Carte (Gare Centrale pour les deux Cartes).
+   Carte (Gare Centrale) et cadrer la vue sur Luxembourg-Ville (`viewBbox`). Le zoom arrière DOIT permettre
+   de voir le pays entier.
 2. QUAND l'utilisateur saisit au moins 3 caractères, l'Application DOIT proposer jusqu'à 3 stations
    ferrées locales, puis des adresses du géocodeur de geoportail.lu, 7 résultats au total.
 3. L'Application DOIT n'afficher que les adresses situées dans l'emprise de la Carte.
@@ -123,11 +125,15 @@ départ.
    (Dijkstra sur le graphe précalculé) et colorer la carte avec la palette de l'original, du vert au rouge.
 2. L'Application DOIT tracer par défaut les isochrones à 15 et 30 minutes, et proposer aussi 45 et
    60 minutes.
-3. L'Application DOIT permettre de régler l'échelle des couleurs entre 20 et 90 minutes, par pas de 5.
-4. L'Application DOIT afficher le réseau ferré avec la couleur de chaque ligne, ainsi que les arrêts.
+3. L'Application DOIT permettre de régler l'échelle des couleurs entre 20 et 150 minutes, par pas de 5.
+4. Tant que l'utilisateur n'a touché ni à l'échelle ni aux isochrones (et qu'aucun `max` ou `iso` n'est dans
+   l'URL), l'Application DOIT adapter l'échelle au zoom : 45 minutes quand environ 12 km sont visibles,
+   jusqu'à 90 minutes quand le pays entier l'est, par pas de 5. Les isochrones suivent : 15 et 30 minutes
+   tant que l'échelle est sous 60 minutes, 30 et 60 au-delà.
+5. L'Application DOIT afficher le réseau ferré avec la couleur de chaque ligne, ainsi que les arrêts.
    Elle DOIT aussi afficher les noms des arrêts au-delà d'un certain niveau de zoom.
-5. Le calcul complet pour un départ DOIT prendre moins de 300 ms sur la Carte `luxembourg`, sur un
-   ordinateur portable récent.
+6. Le calcul complet pour un départ DOIT prendre moins de 300 ms sur la Carte, sur un ordinateur portable
+   récent.
 
 ### R7 : Arrivée et itinéraire
 
@@ -167,7 +173,8 @@ forment l'essentiel du réseau.
 
 ### R10 : Pages
 
-1. Le site DOIT générer une page par Carte, avec les sections de l'original :
+1. Le site DOIT générer, par langue, une page unique à la racine (`/`, `/en/`, `/de/`) qui porte la Carte,
+   avec les sections de l'original :
    - titre et accroche ;
    - recherche ;
    - carte et contrôles ;
@@ -176,8 +183,9 @@ forment l'essentiel du réseau.
    - tableau des lignes ferrées ;
    - FAQ avec la méthode de calcul ;
    - crédits.
-2. Le site DOIT proposer une page d'accueil qui présente les deux Cartes, une page de mentions légales,
-   une page 404, un `sitemap.xml` et un `robots.txt`.
+2. Le site DOIT proposer une page de mentions légales, une page 404, un `sitemap.xml` et un `robots.txt`.
+   Les anciennes adresses `/luxembourg-ville/` et `/luxembourg/` (et leurs versions `/en/`, `/de/`) DOIVENT
+   rediriger vers la page de la Carte dans la même langue, en conservant les paramètres d'URL.
 3. Le site DOIT être en français par défaut (voir R15 pour les autres langues).
 4. Les pages de classement des villes françaises et les images de prévisualisation générées ne font pas
    partie de cette version.

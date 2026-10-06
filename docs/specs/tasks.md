@@ -93,3 +93,29 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - Générer `/en/` et `/de/`, avec le sélecteur de langue et les liens `hreflang`.
   - Ajouter l'appel aux contributeurs dans le README et le pied de page.
   - _Exigences : R15.1 à R15.6_
+
+- [ ] 17. Carte unique : configuration et pipeline
+  - Fusionner les deux Cartes dans `cities/luxembourg.json` (200 m, `viewBbox` ville, rivières).
+  - Supprimer `cities/luxembourg-ville.json`.
+  - Écrire le format compact (`meta.format = 2`).
+  - _Exigences : R4.1, R4.2_
+
+- [ ] 18. Décodage du format compact
+  - Écrire `site/data-format.mjs` et l'utiliser dans `app.js`, `tools/check_trips.mjs` et `tools/compare_trips.mjs`.
+  - _Exigences : R4.2_
+
+- [ ] 19. Vue ville et échelle automatique
+  - Zoom arrière jusqu'au pays.
+  - `autoScale()` pour l'échelle et les isochrones, désactivée dès une action manuelle.
+  - Paramètres d'URL `max` et `iso` uniquement en mode manuel.
+  - _Exigences : R5.1, R6.3, R6.4, R9.1_
+
+- [ ] 20. Pages et redirections
+  - Une page Carte par langue à la racine, sans sélecteur de carte.
+  - `site/_redirects` pour les anciennes adresses ; sitemap mis à jour.
+  - _Exigences : R10.1, R10.2_
+
+- [ ] 21. Vérification
+  - Build, `check_trips`, banc d'essai, tailles (R4.2).
+  - Navigateur : ville puis pays, échelle automatique, redirections, mobile.
+  - _Exigences : R4.2, R6.6, R14_

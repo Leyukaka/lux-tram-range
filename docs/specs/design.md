@@ -218,6 +218,29 @@ Le format de `site/data/<slug>.json` est inchangé : `meta`, `boroughs`, `water`
 - Les mentions légales indiquent l'éditeur (le mainteneur du dépôt) et l'hébergeur (Cloudflare), et
   précisent l'absence de cookies et de mesure d'audience, ainsi que les licences.
 
+## Carte unique (2026-10-06)
+
+Les deux cartes ont été fusionnées à la demande de l'owner : une Carte pays à 200 m, ouverte sur la ville.
+
+- `cities/luxembourg.json` : `gridCellMeters: 200`, `viewBbox` sur Luxembourg-Ville, rivières Alzette, Pétrusse
+  (cours d'eau), Sûre, Moselle. `cities/luxembourg-ville.json` est supprimé.
+- **Format compact** de `site/data/luxembourg.json` (`meta.format = 2`), décodé au chargement par
+  `site/data-format.mjs` (`decode(data)`) dans la forme historique ; le reste de `app.js` et les outils
+  (`tools/*.mjs`) restent inchangés :
+  - `routeStates` : `{"station": [...], "route": [indice dans "routeIds"], "wait": [...], "access": [...]}`
+    et `routeIds` ;
+  - `adjacency` : par état, une liste plate `[dst, poids, dst, poids, ...]` ;
+  - `cells` : `{"index": [rang dans la grille], "access": [[station, mètres, station, mètres, ...]]}` ;
+    rangée, colonne et centre se déduisent du rang et de `meta.bounds`.
+- **Zoom** : `fitView` cadre `viewBounds` (la ville) ; le zoom arrière descend jusqu'au cadrage de
+  `meta.bounds` (le pays).
+- **Échelle automatique** : `autoScale()` choisit `maxMinutes` selon la largeur visible (45 min à 12 km, 90 min
+  à 70 km, interpolation linéaire, pas de 5) et les isochrones (15/30 sous 60 min, 30/60 au-delà). Désactivée
+  dès que l'utilisateur touche le curseur ou les isochrones, ou si l'URL porte `max` ou `iso`.
+- **Pages** : la page de la Carte est la racine de chaque langue ; plus de page d'accueil ni de sélecteur de
+  carte. `site/_redirects` redirige les anciennes adresses (`/luxembourg-ville/* -> /`, etc.) ; les Workers
+  Static Assets conservent la chaîne de requête.
+
 ## Hébergement
 
 ```jsonc
