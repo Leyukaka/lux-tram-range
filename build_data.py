@@ -41,7 +41,7 @@ INTER_COMPLEX_WALK_RADIUS = 450.0
 STOP_GROUP_RADIUS = 350.0
 MIN_RIDE_MINUTES = 0.4
 MIN_WAIT = 1.0
-MAX_WAIT = 15.0
+MAX_WAIT = 15.0  # overridden by the map config ("maxWait")
 # Daytime window used to measure headways and ride times (weekday, 7h–20h).
 SERVICE_WINDOW = (7 * 3600, 20 * 3600)
 MIN_RING_DISTANCE = 45.0
@@ -57,22 +57,28 @@ CONTEXT_RING_DISTANCE = 80.0
 WATER_MASK_AREA = 1_000_000.0
 
 # GTFS route_type → mode (basic and extended types).
-RAIL_MODES = {"tram", "metro", "rer", "funicular", "cable", "busway"}
+RAIL_MODES = {"tram", "train", "metro", "rer", "funicular", "cable", "busway"}
 # Minutes to walk from the street to the platform (and back): stairs and corridors of underground lines.
-MODE_ACCESS_MINUTES = {"metro": 1.0, "rer": 1.0, "funicular": 1.0, "cable": 1.0}
+MODE_ACCESS_MINUTES = {"train": 1.0, "metro": 1.0, "rer": 1.0, "funicular": 1.0, "cable": 1.0}
 # Communes kept when a city config says "communes": "served": enough stops, and not too far from tram/metro.
 SERVED_MIN_STOPS = 3
 SERVED_MAX_RAIL_DISTANCE = 12_000.0
 # Preview image (og): arrival at the rail station closest to this travel time from the centre.
 OG_TRIP_MINUTES = 20
 REFERENCE_HORIZON_DAYS = 60
+# A train branch (category + terminus pair) needs this many daytime trips to stand as its own line.
+TRAIN_BRANCH_MIN_TRIPS = 4
+# Trains sharing a branch's next stations are boarded alike: the wait counts them all (see shared_train_waits).
+TRAIN_SHARED_STOPS = 3
 
 
 def route_mode(route_type: str) -> str:
     value = int(route_type or 3)
     if value == 0 or 900 <= value < 1000:
         return "tram"
-    if value in (1, 2) or 100 <= value < 200 or 400 <= value < 500:
+    if value == 2 or 100 <= value < 200:
+        return "train"
+    if value == 1 or 400 <= value < 500:
         return "metro"
     if value == 7 or 1400 <= value < 1500:
         return "funicular"
@@ -383,23 +389,38 @@ def extract_arrondissements(data_dir: Path, city: dict) -> List[dict]:
     return arrondissements
 
 
+def osm_communes(data_dir: Path) -> List[Tuple[str, MultiPolygon]]:
+    """Communes from OSM administrative relations (Luxembourg), simplified like the geo.api.gouv.fr contours."""
+    communes = []
+    for element in load_json(data_dir / "osm_communes.json")["elements"]:
+        name = element.get("tags", {}).get("name")
+        polygons = [[simplify_ring(ring, MIN_RING_DISTANCE) for ring in polygon] for polygon in osm_polygons(element)]
+        if name and polygons:
+            communes.append((name, polygons))
+    return communes
+
+
 def extract_communes(data_dir: Path, city: dict, stations: Sequence[dict]) -> Tuple[List[dict], MultiPolygon]:
-    payload = load_json(data_dir / "communes.geojson")
-    # Some metropolises are far larger than their urban network (Aix-Marseille-Provence): keep only the listed
-    # communes, or the ones actually served.
-    wanted = served_communes(payload, stations) if city.get("communes") == "served" else set(city.get("communes", []))
+    if city.get("communesSource") == "osm":
+        features = osm_communes(data_dir)
+        wanted = set() if city.get("communes") == "all" else set(city.get("communes", []))
+    else:
+        payload = load_json(data_dir / "communes.geojson")
+        features = [(f["properties"]["nom"], coords_to_polygons(f["geometry"])) for f in payload["features"]]
+        # Some metropolises are far larger than their urban network (Aix-Marseille-Provence): keep only the listed
+        # communes, or the ones actually served.
+        wanted = served_communes(payload, stations) if city.get("communes") == "served" else set(city.get("communes", []))
     communes = []
     all_polygons: MultiPolygon = []
-    for feature in sorted(payload["features"], key=lambda f: f["properties"]["nom"]):
-        if wanted and feature["properties"]["nom"] not in wanted:
+    for name, polygons in sorted(features, key=lambda item: item[0]):
+        if wanted and name not in wanted:
             continue
-        polygons = coords_to_polygons(feature["geometry"])
         if not polygons:
             continue
         largest = max((polygon[0] for polygon in polygons), key=lambda ring: abs(ring_area(ring)))
         communes.append(
             {
-                "name": feature["properties"]["nom"],
+                "name": name,
                 "polygons": [serialize_polygon(polygon) for polygon in polygons],
                 "outline": [[round_point(point) for point in polygon[0]] for polygon in polygons],
                 "label": round_point(polygon_centroid(largest)),
@@ -562,7 +583,8 @@ def pick_reference_date(services: Dict[date, frozenset], trips_per_service: Coun
 
 
 SMALL_WORDS = {"de", "du", "des", "la", "le", "les", "et", "en", "sur", "sous", "aux", "au", "à"}
-ACRONYMS = {"TGV", "SNCF", "CHU", "CHR", "IUT", "ZI", "ZA", "ZAC", "RN", "RD", "TER", "UFR", "INSA", "EDF", "CPAM", "IME", "MEETT"}
+ACRONYMS = {"TGV", "SNCF", "CHU", "CHR", "IUT", "ZI", "ZA", "ZAC", "RN", "RD", "TER", "UFR", "INSA", "EDF", "CPAM", "IME", "MEETT",
+            "CFL", "AVL", "RGTR", "TICE", "P+R", "CHL", "LTETT"}
 
 
 def display_name(name: str) -> str:
@@ -583,8 +605,12 @@ def display_name(name: str) -> str:
     return " ".join(words)
 
 
+# Luxembourg names the tram and bus sides of one place apart (« Theater (Tram) », « Theater (Bus) »): one complex.
+MODE_SUFFIX = re.compile(r"\s*\((tram|bus)\)\s*$", re.IGNORECASE)
+
+
 def normalize_name(name: str) -> str:
-    return " ".join(name.lower().replace("-", " ").replace("’", "'").split())
+    return " ".join(MODE_SUFFIX.sub("", name).lower().replace("-", " ").replace("’", "'").split())
 
 
 def group_stops(stops: Dict[str, dict], used_stop_ids: set) -> Tuple[List[dict], Dict[str, int]]:
@@ -619,7 +645,7 @@ def group_stops(stops: Dict[str, dict], used_stop_ids: set) -> Tuple[List[dict],
             complexes.append(
                 {
                     "id": min(cluster),
-                    "name": display_name(names.most_common(1)[0][0]),
+                    "name": display_name(MODE_SUFFIX.sub("", names.most_common(1)[0][0])),
                     "point": (sum(xs) / len(xs), sum(ys) / len(ys)),
                     "routes": set(),
                 }
@@ -658,11 +684,106 @@ def route_excluded(row: dict, city: dict) -> bool:
     )
 
 
-def extract_network(data_dir: Path, city: dict):
+def effective_routes(stop_times, trips, routes, complexes, complex_of, city) -> Dict[str, str]:
+    """Route of each trip. The Luxembourg feed has one route per train category (RE, RB, IC…) covering every
+    branch: the wait at a station would count the departures of all branches. Each category is split into lines
+    by terminus pair (« RE Luxembourg - Troisvierges »); branches with too few daytime trips join the branch they
+    share most stations with, so that they do not get an artificially capped wait."""
+    trip_route = {trip_id: trips[trip_id]["route_id"] for trip_id in stop_times}
+    if not city.get("splitTrainRoutes"):
+        return trip_route
+    window_start, window_end = SERVICE_WINDOW
+    branch_trips: Dict[str, List[str]] = defaultdict(list)
+    branch_stations: Dict[str, set] = defaultdict(set)
+    daytime: Counter = Counter()
+    for trip_id, sequence in stop_times.items():
+        route_id = trips[trip_id]["route_id"]
+        if route_mode(routes[route_id].get("route_type", "3")) != "train":
+            continue
+        sequence.sort()
+        ends = sorted({complex_of[sequence[0][1]], complex_of[sequence[-1][1]]}, key=lambda i: complexes[i]["name"])
+        branch = f"{route_id}:{'-'.join(complexes[i]['id'] for i in ends)}"
+        branch_trips[branch].append(trip_id)
+        branch_stations[branch].update(complex_of[stop_id] for _, stop_id, _, _ in sequence)
+        if window_start <= sequence[0][3] < window_end:
+            daytime[branch] += 1
+        if branch not in routes:
+            short = routes[route_id].get("route_short_name") or route_id
+            names = " - ".join(re.sub(r",\s*Gare( Centrale)?$", "", complexes[i]["name"]) for i in ends)
+            routes[branch] = {**routes[route_id], "route_id": branch, "route_long_name": f"{short} {names}"}
+    merged = {}
+    for branch in branch_trips:
+        if daytime[branch] >= TRAIN_BRANCH_MIN_TRIPS:
+            continue
+        category = branch.split(":")[0]
+        others = [other for other in branch_trips if other.split(":")[0] == category and daytime[other] >= TRAIN_BRANCH_MIN_TRIPS]
+        if others:
+            merged[branch] = max(others, key=lambda other: (len(branch_stations[branch] & branch_stations[other]), daytime[other]))
+    for branch, trip_ids in branch_trips.items():
+        for trip_id in trip_ids:
+            trip_route[trip_id] = merged.get(branch, branch)
+    return trip_route
+
+
+def shared_train_waits(stop_times, trips, trip_route, routes, complex_of, window_minutes) -> Dict[Tuple[int, str], float]:
+    """Wait for a train branch at a station, counting every train that serves its next stations.
+
+    Once trains are split by terminus, a traveller from Luxembourg to Ettelbruck still boards the first IC, RE or RB
+    heading there, not only the trains of one branch. For each daytime departure of a branch, the trains that leave
+    the same station and also stop at its next TRAIN_SHARED_STOPS stations are counted; the headway is the window
+    divided by that count (averaged over the trips, then over the two directions, as for the other lines)."""
+    window_start, window_end = SERVICE_WINDOW
+    is_train = {trip_id for trip_id in stop_times if route_mode(routes[trips[trip_id]["route_id"]].get("route_type", "3")) == "train"}
+    downstream: Dict[int, List[set]] = defaultdict(list)  # station → stations served after it, per daytime departure
+    plans = []
+    for trip_id in is_train:
+        stations = [complex_of[stop_id] for _, stop_id, _, _ in stop_times[trip_id]]
+        for i, (_, _, _, dep) in enumerate(stop_times[trip_id][:-1]):
+            if window_start <= dep < window_end:
+                downstream[stations[i]].append(set(stations[i + 1:]))
+                plans.append((stations[i], trip_route[trip_id], trips[trip_id].get("direction_id") or "0",
+                              set(stations[i + 1:i + 1 + TRAIN_SHARED_STOPS])))
+    counts: Dict[Tuple[int, str], Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
+    for station, route_id, direction, needed in plans:
+        counts[(station, route_id)][direction].append(sum(1 for served in downstream[station] if needed <= served))
+    waits = {}
+    for key, per_direction in counts.items():
+        mean_departures = statistics.mean(statistics.mean(values) for values in per_direction.values())
+        waits[key] = round(min(MAX_WAIT, max(MIN_WAIT, window_minutes / mean_departures / 2.0)), 2)
+    return waits
+
+
+def add_extra_links(city: dict, complexes: List[dict], routes: Dict[str, dict], edges: dict, waits: dict) -> List[Tuple[str, int, int]]:
+    """Links missing from the feed (the Pfaffenthal-Kirchberg funicular): a two-station line both ways."""
+    by_name: Dict[str, List[int]] = defaultdict(list)
+    for index, station in enumerate(complexes):
+        by_name[normalize_name(station["name"])].append(index)
+    added = []
+    for link in city.get("extraLinks", []):
+        ends = []
+        for key in ("from", "to"):
+            found = by_name.get(normalize_name(link[key]))
+            if not found:
+                sys.exit(f"extraLinks {link['id']}: arrêt « {link[key]} » introuvable dans le GTFS")
+            ends.append(found[0])
+        a, b = ends
+        route_id = link["id"]
+        routes[route_id] = {"route_id": route_id, "route_short_name": link.get("short", route_id),
+                            "route_long_name": link["name"], "route_type": "7", "route_color": ""}
+        wait = round(min(MAX_WAIT, max(MIN_WAIT, link["headway"] / 2.0)), 2)
+        for src, dst in ((a, b), (b, a)):
+            complexes[src]["routes"].add(route_id)
+            edges[(src, dst, route_id)] = max(MIN_RIDE_MINUTES, float(link["minutes"]))
+            waits[(src, route_id)] = wait
+        added.append((route_id, a, b))
+    return added
+
+
+def extract_network(gtfs_path: Path, city: dict):
     # Some feeds mislabel their lines (Reims declares its tram as a metro); configs fix them by short name, or by
     # route_id when the name is ambiguous (the RER A of Île-de-France and the A buses of its suburbs).
     mode_overrides = city.get("routeModes", {})
-    with zipfile.ZipFile(data_dir / "gtfs.zip") as archive:
+    with zipfile.ZipFile(gtfs_path) as archive:
         routes = {row["route_id"]: row for row in read_gtfs_table(archive, "routes.txt")}
         excluded = {route_id for route_id, row in routes.items() if route_excluded(row, city)}
         stops = {row["stop_id"]: row for row in read_gtfs_table(archive, "stops.txt")}
@@ -696,9 +817,10 @@ def extract_network(data_dir: Path, city: dict):
     ride_samples: Dict[Tuple[int, int, str], List[float]] = defaultdict(list)
     departures: Dict[Tuple[int, str], Counter] = defaultdict(Counter)
     window_start, window_end = SERVICE_WINDOW
+    trip_route = effective_routes(stop_times, trips, routes, complexes, complex_of, city)
     for trip_id, sequence in stop_times.items():
         trip = trips[trip_id]
-        route_id = trip["route_id"]
+        route_id = trip_route[trip_id]
         sequence.sort()
         for (_, stop_a, _, dep_a), (_, stop_b, arr_b, _) in zip(sequence, sequence[1:]):
             a, b = complex_of[stop_a], complex_of[stop_b]
@@ -716,23 +838,32 @@ def extract_network(data_dir: Path, city: dict):
         mean_departures = sum(per_direction.values()) / len(per_direction)
         headway = window_minutes / mean_departures
         waits[key] = round(min(MAX_WAIT, max(MIN_WAIT, headway / 2.0)), 2)
+    if city.get("splitTrainRoutes"):
+        waits.update(shared_train_waits(stop_times, trips, trip_route, routes, complex_of, window_minutes))
+    extra_links = add_extra_links(city, complexes, routes, edges, waits)
 
+    # Most routes of the Luxembourg feed have no colour: the network config gives one by short name.
+    colors = city.get("routeColors", {})
     served = {route_id for station in complexes for route_id in station["routes"]}
     route_info = {}
     for route_id in sorted(served):  # sorted: identical output from one build to the next
         row = routes[route_id]
-        mode = mode_overrides.get(route_id) or mode_overrides.get(row.get("route_short_name", ""), route_mode(row.get("route_type", "3")))
+        short = row.get("route_short_name", "")
+        mode = mode_overrides.get(route_id) or mode_overrides.get(short, route_mode(row.get("route_type", "3")))
+        color = (row.get("route_color") or "").strip().lstrip("#") or colors.get(short, colors.get(route_id, "#888888")).lstrip("#")
         route_info[route_id] = {
             "mode": mode,
             "rail": mode in RAIL_MODES,
-            "color": f"#{(row.get('route_color') or '888888').strip().lstrip('#') or '888888'}",
-            "name": row.get("route_short_name") or row.get("route_long_name") or route_id,
+            "color": f"#{color}",
+            "name": short or row.get("route_long_name") or route_id,
+            **({"longName": row["route_long_name"]} if row.get("route_long_name") and short else {}),
         }
-    rail_shape_ids = {
-        trip["shape_id"] for trip in trips.values() if route_info.get(trip["route_id"], {}).get("rail") and trip.get("shape_id")
+    shape_routes = {
+        trip["shape_id"]: trip_route[trip_id]
+        for trip_id, trip in trips.items()
+        if trip_id in trip_route and trip.get("shape_id") and route_info.get(trip_route[trip_id], {}).get("rail")
     }
-    shape_routes = {trip["shape_id"]: trip["route_id"] for trip in trips.values() if trip.get("shape_id") in rail_shape_ids}
-    return reference_date, complexes, edges, waits, route_info, shape_routes
+    return reference_date, complexes, edges, waits, route_info, shape_routes, extra_links
 
 
 def build_graph(complexes: Sequence[dict], edges, waits, route_info: Dict[str, dict], access_minutes: Dict[str, float], rivers: Rivers):
@@ -885,11 +1016,11 @@ def build_grid(land: MultiPolygon, masked_water: MultiPolygon, stations: Sequenc
     return cells, mask
 
 
-def network_stats(city: dict, route_info, stations, route_states, station_states, adjacency, rivers: Rivers) -> dict:
+def network_stats(city: dict, route_info, stations, route_states, station_states, adjacency, rivers: Rivers, inside: set) -> dict:
     """Figures shown on the page (and its FAQ): lines, headways, share of rail stations within 30 min of the centre."""
     rail_states = [i for i, state in enumerate(route_states) if route_info[state["routeId"]]["rail"]]
     lines = []
-    mode_order = {"metro": 0, "tram": 1, "funicular": 2, "cable": 3}
+    mode_order = {"train": 0, "metro": 1, "tram": 2, "funicular": 3, "cable": 4}
     for route_id, info in sorted(route_info.items(), key=lambda item: (mode_order.get(item[1]["mode"], 9), len(item[1]["name"]), item[1]["name"])):
         if not info["rail"]:
             continue
@@ -897,6 +1028,7 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
         lines.append(
             {
                 "name": info["name"],
+                **({"longName": info["longName"]} if info.get("longName") else {}),
                 "mode": info["mode"],
                 "color": info["color"],
                 "stations": len(waits),
@@ -906,8 +1038,10 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
 
     # Same model as the browser: walk to the nearest rail stations, then rail only.
     origin = lonlat_to_xy(city["defaultFrom"]["lon"], city["defaultFrom"]["lat"])
-    rail_station_ids = [i for i, station in enumerate(stations) if station["rail"]]
-    nearest = sorted(rail_station_ids, key=lambda i: dist(origin, stations[i]["point"]))[: ORIGIN_NEAREST_STATIONS * CELL_CANDIDATES]
+    all_rail_ids = [i for i, station in enumerate(stations) if station["rail"]]
+    # Figures cover the stations of the map (the network runs beyond it: trains to the borders).
+    rail_station_ids = [i for i in all_rail_ids if i in inside]
+    nearest = sorted(all_rail_ids, key=lambda i: dist(origin, stations[i]["point"]))[: ORIGIN_NEAREST_STATIONS * CELL_CANDIDATES]
     walks = {i: rivers.walk(origin, stations[i]["point"]) for i in nearest}
     seeds = sorted((i for i in nearest if walks[i] < math.inf), key=walks.get)[:ORIGIN_NEAREST_STATIONS]
     best = [math.inf] * len(route_states)
@@ -958,11 +1092,13 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
     }
 
 
-def write_provenance(city: dict, data_dir: Path, reference_date: date, route_info: Dict[str, dict], stations: Sequence[dict], stats: dict) -> Path:
+def write_provenance(city: dict, data_dir: Path, gtfs_dir: Path, reference_date: date, route_info: Dict[str, dict], stations: Sequence[dict], stats: dict) -> Path:
     """Record in sources/<city>.json (versioned) which raw files were used, when they were fetched and what they cover."""
-    manifest_path = data_dir / "manifest.json"
-    manifest = load_json(manifest_path) if manifest_path.exists() else {}
-    with zipfile.ZipFile(data_dir / "gtfs.zip") as archive:
+    manifest = {}
+    for directory in (gtfs_dir, data_dir):
+        if (directory / "manifest.json").exists():
+            manifest.update(load_json(directory / "manifest.json"))
+    with zipfile.ZipFile(gtfs_dir / "gtfs.zip") as archive:
         feed_info = next(iter(read_gtfs_table(archive, "feed_info.txt")), None)
         services = services_by_date(list(read_gtfs_table(archive, "calendar.txt")), list(read_gtfs_table(archive, "calendar_dates.txt")))
     days = sorted(day for day, active in services.items() if active)
@@ -979,11 +1115,11 @@ def write_provenance(city: dict, data_dir: Path, reference_date: date, route_inf
             "feedInfo": feed_info,
             "servicePeriod": [days[0].isoformat(), days[-1].isoformat()] if days else None,
         },
-        "communes": {"metropole": city["metropole"], "epci": city["epci"], **manifest.get("communes.geojson", {})},
+        "communes": {"territory": city["territory"], **manifest.get("osm_communes.json", manifest.get("communes.geojson", {}))},
         **({"arrondissements": manifest["arrondissements.geojson"]} if "arrondissements.geojson" in manifest else {}),
         "openStreetMap": {
             "licence": "ODbL, © contributeurs OpenStreetMap",
-            **{name.removesuffix(".json"): manifest[name] for name in ("osm_rail.json", "osm_water_parks.json", "osm_rivers.json", "osm_bridges.json") if name in manifest},
+            **{name.removesuffix(".json"): manifest[name] for name in ("osm_communes.json", "osm_rail.json", "osm_water_parks.json", "osm_rivers.json", "osm_bridges.json") if name in manifest},
         },
         "railGeometry": "OpenStreetMap" if city.get("railGeometry") == "osm" else "GTFS shapes.txt",
         "excludedRoutes": city.get("excludeRoutes", []),
@@ -1001,22 +1137,27 @@ def write_provenance(city: dict, data_dir: Path, reference_date: date, route_inf
 
 
 def main() -> None:
-    global LAT0
+    global LAT0, MAX_WAIT
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     city = load_city(sys.argv[1])
     LAT0 = city["lat0"]
+    MAX_WAIT = float(city["maxWait"])
+    cell_meters = float(city["gridCellMeters"])
     data_dir = ROOT / "data" / city["slug"]
+    gtfs_dir = ROOT / "data" / city["gtfsDir"]
     output_path = ROOT / "site" / "data" / f"{city['slug']}.json"
 
-    reference_date, complexes, edges, waits, route_info, shape_routes = extract_network(data_dir, city)
+    reference_date, complexes, edges, waits, route_info, shape_routes, extra_links = extract_network(gtfs_dir / "gtfs.zip", city)
     for station in complexes:
         station["rail"] = any(route_info[route_id]["rail"] for route_id in station["routes"])
     communes, land = extract_communes(data_dir, city, complexes)
+    if not land:
+        sys.exit(f"Aucune commune retenue pour {city['slug']} ({city.get('communes')})")
     arrondissements = extract_arrondissements(data_dir, city)
     bounds = multipolygon_bounds(land, LAND_PAD_METERS)
-    cols = round((bounds[2] - bounds[0]) / GRID_CELL_METERS)
-    rows = round((bounds[3] - bounds[1]) / GRID_CELL_METERS)
+    cols = round((bounds[2] - bounds[0]) / cell_meters)
+    rows = round((bounds[3] - bounds[1]) / cell_meters)
     masked_water, water, parks = extract_water_and_parks(data_dir, bounds)
     context = extract_context(data_dir, city)
 
@@ -1027,7 +1168,11 @@ def main() -> None:
     if city.get("railGeometry") == "osm":
         routes = rail_routes_from_osm(data_dir, city, route_info)
     else:
-        routes = rail_routes_from_gtfs(data_dir, shape_routes, route_info)
+        routes = rail_routes_from_gtfs(gtfs_dir, shape_routes, route_info)
+    for route_id, a, b in extra_links:  # no shape in the feed: a straight line between the two stations
+        if route_info[route_id]["rail"] and a < b:
+            routes.append({"id": route_id, "color": route_info[route_id]["color"],
+                           "points": [round_point(complexes[a]["point"]), round_point(complexes[b]["point"])]})
 
     stations = [
         {
@@ -1055,6 +1200,9 @@ def main() -> None:
             max(station["point"][0] for station in stations) + VIEW_PAD_METERS,
             max(station["point"][1] for station in stations) + VIEW_PAD_METERS,
         )
+    if city.get("view") == "land":
+        # Luxembourg: the network runs far beyond the map (trains to the borders), frame the communes themselves.
+        view_bounds = multipolygon_bounds(land, VIEW_PAD_METERS)
     if city.get("viewBbox"):
         # Paris: the RER reaches far into the suburbs, the map opens on the city and its inner ring.
         south, west, north, east = city["viewBbox"]
@@ -1092,8 +1240,10 @@ def main() -> None:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(output, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
-    stats = network_stats(city, route_info, stations, route_states, station_states, adjacency, rivers)
-    provenance_path = write_provenance(city, data_dir, reference_date, route_info, stations, stats)
+    land_set = PolygonSet(land)
+    inside = {i for i, station in enumerate(stations) if land_set.contains(station["point"])}
+    stats = network_stats(city, route_info, stations, route_states, station_states, adjacency, rivers, inside)
+    provenance_path = write_provenance(city, data_dir, gtfs_dir, reference_date, route_info, stations, stats)
     print(f"Wrote {provenance_path.relative_to(ROOT)}")
     rail_count = sum(1 for station in stations if station["rail"])
     modes = Counter(info["mode"] for info in route_info.values())
