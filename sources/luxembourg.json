@@ -1,0 +1,250 @@
+{
+  "city": "Luxembourg",
+  "builtAt": "2026-10-06T13:05:12+00:00",
+  "referenceDate": "2026-11-10",
+  "serviceWindow": "7h–20h",
+  "gtfs": {
+    "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR, TICE)",
+    "dataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
+    "source": "https://download.data.public.lu/resources/horaires-et-arrets-des-transport-publics-gtfs/20261001-055928/gtfs-20260930-20261212.zip",
+    "how": "download",
+    "fetchedAt": "2026-10-06T12:38:55+00:00",
+    "bytes": 16847778,
+    "sha256": "8b4ea53d9c315dce3ca45d6610a624ebaa58f0069abcec9ce4523c8b43583876",
+    "resource": "gtfs-20260930-20261212.zip",
+    "lastModified": "2026-10-01T05:59:33.440000+00:00",
+    "feedInfo": null,
+    "servicePeriod": [
+      "2026-09-30",
+      "2026-12-12"
+    ]
+  },
+  "communes": {
+    "territory": "Grand-Duché de Luxembourg",
+    "source": "Overpass API: [out:json][timeout:180];area[\"ISO3166-1\"=\"LU\"][admin_level=2]->.lu;relation(area.lu)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;",
+    "how": "download",
+    "fetchedAt": "2026-10-06T12:45:19+00:00",
+    "bytes": 9796644,
+    "sha256": "936bd0fd9a66159f910cde83376a85f81454d05761d5792e5fba302ca5d6183f"
+  },
+  "openStreetMap": {
+    "licence": "ODbL, © contributeurs OpenStreetMap",
+    "osm_communes": {
+      "source": "Overpass API: [out:json][timeout:180];area[\"ISO3166-1\"=\"LU\"][admin_level=2]->.lu;relation(area.lu)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;",
+      "how": "download",
+      "fetchedAt": "2026-10-06T12:45:19+00:00",
+      "bytes": 9796644,
+      "sha256": "936bd0fd9a66159f910cde83376a85f81454d05761d5792e5fba302ca5d6183f"
+    },
+    "osm_water_parks": {
+      "source": "Overpass API: [out:json][timeout:180];(relation[\"natural\"=\"water\"](49.44,5.72,50.19,6.54);way[\"natural\"=\"water\"](49.44,5.72,50.19,6.54);relation[\"leisure\"=\"park\"](49.56,6.06,49.65,6.2);way[\"leisure\"=\"park\"](49.56,6.06,49.65,6.2););out geom;",
+      "how": "download",
+      "fetchedAt": "2026-10-06T12:45:23+00:00",
+      "bytes": 7011694,
+      "sha256": "d1c394c9756131d90e8881e1b9d12aa9cb016c36956246da1b8ce1ad217d6994"
+    }
+  },
+  "railGeometry": "GTFS shapes.txt",
+  "excludedRoutes": [],
+  "network": {
+    "lines": {
+      "bus": 679,
+      "tram": 1,
+      "train": 20,
+      "funicular": 1
+    },
+    "stops": 2693,
+    "railStations": 101
+  },
+  "stats": {
+    "lines": [
+      {
+        "name": "IC",
+        "longName": "IC Arlon - Luxembourg",
+        "mode": "train",
+        "color": "#8B1E3F",
+        "stations": 8,
+        "headway": 27.3
+      },
+      {
+        "name": "IC",
+        "longName": "IC Gouvy - Luxembourg",
+        "mode": "train",
+        "color": "#8B1E3F",
+        "stations": 12,
+        "headway": 40.0
+      },
+      {
+        "name": "RB",
+        "longName": "RB Diekirch - Luxembourg",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 13,
+        "headway": 30.0
+      },
+      {
+        "name": "RB",
+        "longName": "RB Luxembourg - Wasserbillig",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 11,
+        "headway": 28.9
+      },
+      {
+        "name": "RB",
+        "longName": "RB Luxembourg - Pétange",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 17,
+        "headway": 30.0
+      },
+      {
+        "name": "RB",
+        "longName": "RB Luxembourg - Wasserbillig-Frontière",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 12,
+        "headway": 28.9
+      },
+      {
+        "name": "RB",
+        "longName": "RB Bettembourg - Volmerange-les-Mines",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 6,
+        "headway": 30.6
+      },
+      {
+        "name": "RB",
+        "longName": "RB Noertzange - Rumelange",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 4,
+        "headway": 41.1
+      },
+      {
+        "name": "RB",
+        "longName": "RB Arlon - Luxembourg",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 8,
+        "headway": 28.9
+      },
+      {
+        "name": "RB",
+        "longName": "RB Athus - Luxembourg",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 11,
+        "headway": 30.0
+      },
+      {
+        "name": "RB",
+        "longName": "RB Audun-le-Tiche - Esch-sur-Alzette",
+        "mode": "train",
+        "color": "#E8707A",
+        "stations": 2,
+        "headway": 30.0
+      },
+      {
+        "name": "RE",
+        "longName": "RE Kautenbach - Wiltz",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 4,
+        "headway": 60.0
+      },
+      {
+        "name": "RE",
+        "longName": "RE Mersch - Pétange",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 18,
+        "headway": 30.0
+      },
+      {
+        "name": "RE",
+        "longName": "RE Luxembourg - Rodange",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 19,
+        "headway": 20.0
+      },
+      {
+        "name": "RE",
+        "longName": "RE Luxembourg - Wasserbillig-Frontière",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 4,
+        "headway": 26.2
+      },
+      {
+        "name": "RE",
+        "longName": "RE Rodange - Troisvierges",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 23,
+        "headway": 24.4
+      },
+      {
+        "name": "RE",
+        "longName": "RE Longwy - Luxembourg",
+        "mode": "train",
+        "color": "#D6001C",
+        "stations": 8,
+        "headway": 31.2
+      },
+      {
+        "name": "TER",
+        "longName": "TER Hettange-Grande, Gare SNCF - Luxembourg",
+        "mode": "train",
+        "color": "#1F4E9C",
+        "stations": 5,
+        "headway": 30.8
+      },
+      {
+        "name": "TER",
+        "longName": "TER Bettembourg-frontière - Luxembourg",
+        "mode": "train",
+        "color": "#1F4E9C",
+        "stations": 4,
+        "headway": 28.9
+      },
+      {
+        "name": "TGV",
+        "longName": "TGV Bettembourg-frontière - Luxembourg",
+        "mode": "train",
+        "color": "#5A5A5A",
+        "stations": 2,
+        "headway": 16.6
+      },
+      {
+        "name": "T1",
+        "mode": "tram",
+        "color": "#6CBE45",
+        "stations": 24,
+        "headway": 3.9
+      },
+      {
+        "name": "FUN",
+        "longName": "Funiculaire",
+        "mode": "funicular",
+        "color": "#009BD4",
+        "stations": 2,
+        "headway": 4.0
+      }
+    ],
+    "railStations": 92,
+    "busLines": 679,
+    "center": "Gare Centrale",
+    "within15": 16,
+    "within30": 60,
+    "farthestStation": "Wiltz, Gare",
+    "farthestMinutes": 92,
+    "ogTrip": {
+      "name": "Berchem, Gare",
+      "lat": 49.54267,
+      "lon": 6.13375
+    }
+  }
+}

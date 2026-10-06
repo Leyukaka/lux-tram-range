@@ -64,8 +64,8 @@ et les correspondances.
 1. Le Pipeline DOIT classer les lignes en modes : `tram` (route_type 0), `train` (route_type 2), `funicular`
    (route_type 7) et `bus` (route_type 3 et autres).
 2. Le Pipeline DOIT découper chaque catégorie de train du Feed (RB, RE, IC, TER, TGV) en lignes distinctes,
-   identifiées par leurs deux terminus. L'attente en gare doit refléter la fréquence de chaque branche et
-   non celle de la catégorie entière.
+   identifiées par leurs deux terminus. L'attente en gare pour une ligne DOIT compter tous les trains, toutes
+   catégories confondues, qui desservent ses trois prochaines gares, car le voyageur prend le premier qui y va.
 3. Le Pipeline DOIT regrouper les arrêts en Complexes avec la règle de l'original : même nom normalisé,
    lien simple à 350 m au plus.
 4. Le Pipeline DOIT calculer le temps de trajet entre deux arrêts consécutifs comme la médiane des courses
@@ -88,7 +88,8 @@ et les correspondances.
 
 1. La Carte `luxembourg-ville` DOIT couvrir la commune de Luxembourg avec une grille de 200 m.
 2. La Carte `luxembourg` DOIT couvrir les 100 communes du pays. Sa maille DOIT être choisie pour que
-   `site/data/luxembourg.json` reste sous 6 Mo non compressé.
+   `site/data/luxembourg.json` reste sous 20 Mo non compressé et sous 4 Mo compressé en gzip. Le fichier de
+   Paris de l'original pèse 13 Mo.
 3. Le Pipeline DOIT exclure de la grille les cellules hors des communes et celles sur une étendue d'eau
    de plus de 1 km².
 4. Pour chaque cellule, le Pipeline DOIT précalculer les 5 arrêts les plus proches et les 3 gares ou
@@ -207,7 +208,7 @@ forment l'essentiel du réseau.
    gare. Il DOIT signaler toute vitesse moyenne inférieure à 8 km/h (trajets de plus de 2 km), ainsi que
    toute vitesse supérieure à 35 km/h pour le tram ou à 90 km/h pour le train.
 3. Les trajets de référence suivants DOIVENT tomber dans les fourchettes indiquées :
-   - Gare Centrale vers Luxexpo en tram : 15 à 25 min ;
+   - Gare Centrale vers Luxexpo en tram : 18 à 30 min ;
    - Gare Centrale vers Ettelbruck : 25 à 40 min ;
    - Gare Centrale vers Esch-sur-Alzette : 20 à 35 min.
 

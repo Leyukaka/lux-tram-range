@@ -161,6 +161,9 @@ Les couleurs reprennent les codes visuels publics des opérateurs, sans logo.
   - Le `route_id` synthétique et `routeInfo.name` valent par exemple "RE Luxembourg - Troisvierges".
   - Les branches à moins de 4 courses dans la fenêtre sont rattachées à la branche la plus proche, celle
     qui partage le plus d'arrêts, pour éviter les attentes plafonnées artificiellement.
+- `shared_train_waits` : l'attente d'une ligne de train à une gare vaut la moitié de l'intervalle entre les
+  trains (toutes lignes confondues) qui partent de cette gare et desservent ses 3 prochaines gares. Sans cette
+  règle, le découpage par terminus donnait Gare Centrale vers Ettelbruck en 42 min au lieu de 35.
 - `extra_links(config, complexes)` : chaque lien crée une ligne synthétique à deux arrêts, avec deux arêtes
   de trajet (aller et retour) et une attente `clamp(headway/2)`.
 - `MAX_WAIT` est lu depuis `config.maxWait`, `GRID_CELL_METERS` depuis `config.gridCellMeters`.
@@ -232,7 +235,7 @@ Le format de `site/data/<slug>.json` est inchangé : `meta`, `boroughs`, `water`
 ## Langues (R15)
 
 - `i18n/fr.json`, `i18n/en.json` et `i18n/de.json` : un dictionnaire plat de clés vers des textes.
-  `{name}`-style placeholders. Le français sert de référence. `build_pages.py` complète chaque langue avec
+  Les variables s'écrivent `{nom}`. Le français sert de référence. `build_pages.py` complète chaque langue avec
   les clés françaises manquantes.
 - `build_pages.py` génère toutes les pages pour chaque langue : le français à la racine, les autres sous
   `/<lang>/`. Les données `site/data/*.json` sont communes à toutes les langues.
