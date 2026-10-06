@@ -87,7 +87,8 @@ def fetch_gtfs(city: dict) -> None:
         url = resource["url"]
         manifest_path = out / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
-        if (out / "gtfs.zip").exists() and manifest.get("gtfs.zip", {}).get("source") == url:
+        known = manifest.get("gtfs.zip", {})
+        if (out / "gtfs.zip").exists() and known.get("source") == url and known.get("lastModified") == resource.get("last_modified"):
             print(f"  déjà à jour ({resource.get('title')})")
             return
         print(f"  {resource.get('title')} ({resource.get('last_modified')})")

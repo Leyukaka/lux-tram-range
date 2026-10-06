@@ -1,6 +1,6 @@
 {
   "city": "Luxembourg",
-  "builtAt": "2026-10-06T13:05:12+00:00",
+  "builtAt": "2026-10-06T13:53:38+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h–20h",
   "gtfs": {
@@ -42,6 +42,20 @@
       "fetchedAt": "2026-10-06T12:45:23+00:00",
       "bytes": 7011694,
       "sha256": "d1c394c9756131d90e8881e1b9d12aa9cb016c36956246da1b8ce1ad217d6994"
+    },
+    "osm_rivers": {
+      "source": "Overpass API: [out:json][timeout:110];way[\"waterway\"~\"^(river)$\"][\"name\"~\"^(Alzette|Sûre|Moselle)( - .*)?$\"][\"tunnel\"!~\".\"](49.44,5.72,50.19,6.54);out geom;",
+      "how": "download",
+      "fetchedAt": "2026-10-06T13:45:00+00:00",
+      "bytes": 190641,
+      "sha256": "36b280c54adde64c389fe72f5e1038ff19ee858b7fb205b834a0ddc64ea51aae"
+    },
+    "osm_bridges": {
+      "source": "Overpass API: [out:json][timeout:110];way[\"bridge\"][\"highway\"][\"highway\"!~\"^(motorway|motorway_link|trunk|trunk_link|construction|proposed)$\"][\"foot\"!=\"no\"](49.44,5.72,50.19,6.54);out geom;",
+      "how": "download",
+      "fetchedAt": "2026-10-06T13:52:45+00:00",
+      "bytes": 2264241,
+      "sha256": "9dbcacf787f10fd27de8adf917bddd6d2d71b17ed069df0cfcc40b7ef059a6c0"
     }
   },
   "railGeometry": "GTFS shapes.txt",
@@ -63,16 +77,16 @@
         "longName": "IC Arlon - Luxembourg",
         "mode": "train",
         "color": "#8B1E3F",
-        "stations": 8,
-        "headway": 27.3
+        "stations": 7,
+        "headway": 27.9
       },
       {
         "name": "IC",
         "longName": "IC Gouvy - Luxembourg",
         "mode": "train",
         "color": "#8B1E3F",
-        "stations": 12,
-        "headway": 40.0
+        "stations": 11,
+        "headway": 60.0
       },
       {
         "name": "RB",
@@ -103,7 +117,7 @@
         "longName": "RB Luxembourg - Wasserbillig-Frontière",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 12,
+        "stations": 11,
         "headway": 28.9
       },
       {
@@ -111,7 +125,7 @@
         "longName": "RB Bettembourg - Volmerange-les-Mines",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 6,
+        "stations": 5,
         "headway": 30.6
       },
       {
@@ -127,7 +141,7 @@
         "longName": "RB Arlon - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 8,
+        "stations": 7,
         "headway": 28.9
       },
       {
@@ -135,7 +149,7 @@
         "longName": "RB Athus - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 11,
+        "stations": 9,
         "headway": 30.0
       },
       {
@@ -143,7 +157,7 @@
         "longName": "RB Audun-le-Tiche - Esch-sur-Alzette",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 2,
+        "stations": 1,
         "headway": 30.0
       },
       {
@@ -167,16 +181,16 @@
         "longName": "RE Luxembourg - Rodange",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 19,
-        "headway": 20.0
+        "stations": 18,
+        "headway": 30.0
       },
       {
         "name": "RE",
         "longName": "RE Luxembourg - Wasserbillig-Frontière",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 4,
-        "headway": 26.2
+        "stations": 3,
+        "headway": 60.0
       },
       {
         "name": "RE",
@@ -184,23 +198,23 @@
         "mode": "train",
         "color": "#D6001C",
         "stations": 23,
-        "headway": 24.4
+        "headway": 30.0
       },
       {
         "name": "RE",
         "longName": "RE Longwy - Luxembourg",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 8,
-        "headway": 31.2
+        "stations": 7,
+        "headway": 60.0
       },
       {
         "name": "TER",
         "longName": "TER Hettange-Grande, Gare SNCF - Luxembourg",
         "mode": "train",
         "color": "#1F4E9C",
-        "stations": 5,
-        "headway": 30.8
+        "stations": 4,
+        "headway": 32.1
       },
       {
         "name": "TER",
@@ -208,7 +222,7 @@
         "mode": "train",
         "color": "#1F4E9C",
         "stations": 4,
-        "headway": 28.9
+        "headway": 29.4
       },
       {
         "name": "TGV",
@@ -216,7 +230,7 @@
         "mode": "train",
         "color": "#5A5A5A",
         "stations": 2,
-        "headway": 16.6
+        "headway": 60.0
       },
       {
         "name": "T1",
@@ -237,14 +251,14 @@
     "railStations": 92,
     "busLines": 679,
     "center": "Gare Centrale",
-    "within15": 16,
-    "within30": 60,
+    "within15": 15,
+    "within30": 48,
     "farthestStation": "Wiltz, Gare",
-    "farthestMinutes": 92,
+    "farthestMinutes": 96,
     "ogTrip": {
-      "name": "Berchem, Gare",
-      "lat": 49.54267,
-      "lon": 6.13375
+      "name": "Kirchberg, Coque",
+      "lat": 49.62278,
+      "lon": 6.15428
     }
   }
 }

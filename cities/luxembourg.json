@@ -59,5 +59,13 @@
       "min": 20,
       "max": 35
     }
+  ],
+  "rivers": [
+    "Alzette",
+    "Sûre",
+    "Moselle"
+  ],
+  "riverWaterways": [
+    "river"
   ]
 }

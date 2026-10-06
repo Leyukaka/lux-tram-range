@@ -734,18 +734,22 @@ def shared_train_waits(stop_times, trips, trip_route, routes, complex_of, window
     divided by that count (averaged over the trips, then over the two directions, as for the other lines)."""
     window_start, window_end = SERVICE_WINDOW
     is_train = {trip_id for trip_id in stop_times if route_mode(routes[trips[trip_id]["route_id"]].get("route_type", "3")) == "train"}
-    downstream: Dict[int, List[set]] = defaultdict(list)  # station → stations served after it, per daytime departure
+    # Only trains with the same next stops count: an express (TGV, RE) and a stopping train (RB, TER) leaving the same
+    # station are not interchangeable, the ride edges of the express would otherwise get the stopping trains' frequency.
+    nexts: Dict[int, Counter] = defaultdict(Counter)  # station → next stops of each daytime departure
     plans = []
     for trip_id in is_train:
         stations = [complex_of[stop_id] for _, stop_id, _, _ in stop_times[trip_id]]
         for i, (_, _, _, dep) in enumerate(stop_times[trip_id][:-1]):
             if window_start <= dep < window_end:
-                downstream[stations[i]].append(set(stations[i + 1:]))
-                plans.append((stations[i], trip_route[trip_id], trips[trip_id].get("direction_id") or "0",
-                              set(stations[i + 1:i + 1 + TRAIN_SHARED_STOPS])))
+                following = tuple(stations[i + 1:i + 1 + TRAIN_SHARED_STOPS])
+                nexts[stations[i]][following] += 1
+                plans.append((stations[i], trip_route[trip_id], trips[trip_id].get("direction_id") or "0", following))
     counts: Dict[Tuple[int, str], Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
-    for station, route_id, direction, needed in plans:
-        counts[(station, route_id)][direction].append(sum(1 for served in downstream[station] if needed <= served))
+    for station, route_id, direction, following in plans:
+        # A shorter tail (near a terminus) also matches the longer trains that start with it.
+        shared = sum(count for other, count in nexts[station].items() if other[:len(following)] == following)
+        counts[(station, route_id)][direction].append(shared)
     waits = {}
     for key, per_direction in counts.items():
         mean_departures = statistics.mean(statistics.mean(values) for values in per_direction.values())
@@ -806,10 +810,22 @@ def extract_network(gtfs_path: Path, city: dict):
             stop_id for stop_id, row in stops.items()
             if south <= float(row["stop_lat"] or 0) <= north and west <= float(row["stop_lon"] or 0) <= east
         }
-        stop_times = {
-            trip_id: kept for trip_id, sequence in stop_times.items()
-            if len(kept := [entry for entry in sequence if entry[1] in inside]) >= 2
-        }
+        # A trip leaving the box and coming back (a bus looping through a neighbouring commune) is split into its
+        # runs inside the box: joining them would link two stops across the missing part in a single ride.
+        runs: Dict[str, List[Tuple[int, str, int, int]]] = {}
+        for trip_id, sequence in stop_times.items():
+            parts: List[List[Tuple[int, str, int, int]]] = [[]]
+            for entry in sorted(sequence):
+                if entry[1] in inside:
+                    parts[-1].append(entry)
+                elif parts[-1]:
+                    parts.append([])
+            parts = [part for part in parts if len(part) >= 2]
+            for k, part in enumerate(parts):
+                run_id = trip_id if k == 0 else f"{trip_id}#{k}"
+                trips.setdefault(run_id, trips[trip_id])
+                runs[run_id] = part
+        stop_times = runs
 
     used_stop_ids = {stop_id for sequence in stop_times.values() for _, stop_id, _, _ in sequence}
     complexes, complex_of = group_stops(stops, used_stop_ids)
@@ -1024,7 +1040,10 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
     for route_id, info in sorted(route_info.items(), key=lambda item: (mode_order.get(item[1]["mode"], 9), len(item[1]["name"]), item[1]["name"])):
         if not info["rail"]:
             continue
-        waits = sorted(route_states[i]["wait"] for i in rail_states if route_states[i]["routeId"] == route_id)
+        waits = sorted(route_states[i]["wait"] for i in rail_states
+                       if route_states[i]["routeId"] == route_id and route_states[i]["stationIndex"] in inside)
+        if not waits:
+            continue  # line running only outside the map (beyond the border, or outside the city)
         lines.append(
             {
                 "name": info["name"],
