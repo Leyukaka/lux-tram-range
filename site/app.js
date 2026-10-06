@@ -817,7 +817,7 @@ function drawMarker(point, color, label) {
   ctx.roundRect(left, top, width, 22, 7);
   ctx.fillStyle = color;
   ctx.fill();
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = contrastText(color);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, left + width / 2, top + 11.5);
@@ -1037,10 +1037,14 @@ function updatePanel() {
   }
 }
 
+// Texte noir ou blanc selon le contraste WCAG (luminance relative), comme build_pages.py.
 function contrastText(hex) {
-  const value = parseInt(hex.slice(1), 16);
-  const luminance = 0.299 * (value >> 16) + 0.587 * ((value >> 8) & 255) + 0.114 * (value & 255);
-  return luminance > 150 ? "#111" : "#fff";
+  const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const linear = rgb.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const luminance = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  const onDark = (luminance + 0.05) / (0.0056 + 0.05);
+  const onLight = 1.05 / (luminance + 0.05);
+  return onDark >= onLight ? "#111" : "#fff";
 }
 
 function updateLegend() {
@@ -1226,6 +1230,8 @@ function setCityPanel(open) {
     citySearch.value = "";
     filterCities();
     citySearch.focus();
+  } else if (cityPanel.contains(document.activeElement)) {
+    cityTrigger.focus();
   }
 }
 
@@ -1423,7 +1429,10 @@ async function searchAddress(query) {
   return [...stops, ...addresses].slice(0, 7);
 }
 
+const searchStatus = $("searchStatus");
+
 function showResults(results) {
+  searchStatus.textContent = results.length ? "" : t("no_results");
   searchResults.replaceChildren(
     ...results.map((result) => {
       const item = document.createElement("li");
@@ -1457,13 +1466,18 @@ searchInput.addEventListener("input", () => {
   const query = searchInput.value.trim();
   if (query.length < 3) {
     searchResults.hidden = true;
+    searchStatus.textContent = "";
     return;
   }
   searchTimer = setTimeout(async () => {
+    searchStatus.textContent = t("searching");
     try {
       showResults(await searchAddress(query));
     } catch (error) {
-      if (error.name !== "AbortError") searchResults.hidden = true;
+      if (error.name !== "AbortError") {
+        searchResults.hidden = true;
+        searchStatus.textContent = t("search_error");
+      }
     }
   }, 250);
 });
@@ -1499,9 +1513,31 @@ async function init() {
   resize();
   restoreFromUrl();
   new ResizeObserver(resize).observe(canvas);
+  for (const control of document.querySelectorAll("[data-needs-data]")) control.disabled = false;
+  $("mapCard").setAttribute("aria-busy", "false");
 }
+
+// Clavier : les flèches déplacent la carte, Entrée pose l'arrivée au centre, Maj + Entrée le départ.
+canvas.addEventListener("keydown", (event) => {
+  if (!app.data) return;
+  const step = 40 / app.view.scale;
+  const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+  if (moves[event.key]) {
+    app.view.cx += moves[event.key][0];
+    app.view.cy += moves[event.key][1];
+    requestRender();
+  } else if (event.key === "Enter") {
+    const center = unproject(app.size.width / 2, app.size.height / 2);
+    const placed = event.shiftKey ? setFrom(center) : setTo(center);
+    if (!placed) toast(t(`point_outside_${CITY.areaKey}`));
+  } else {
+    return;
+  }
+  event.preventDefault();
+});
 
 init().catch((error) => {
   console.error(error);
   $("tripFrom").textContent = t("load_error");
+  $("tripHint").textContent = t("load_retry");
 });

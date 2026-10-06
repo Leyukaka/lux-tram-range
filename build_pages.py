@@ -23,6 +23,13 @@ def translations(lang):
     reference = json.loads((ROOT / 'i18n/fr.json').read_text(encoding='utf-8'))
     return {**reference, **json.loads((ROOT / f'i18n/{lang}.json').read_text(encoding='utf-8'))}
 
+def contrast_text(color):
+    """Black or white text on a line colour, whichever has the higher WCAG contrast (same rule as site/app.js)."""
+    channels = [int(color.lstrip('#')[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    linear = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in channels]
+    luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+    return '#111' if (luminance + 0.05) / (0.0056 + 0.05) >= 1.05 / (luminance + 0.05) else '#fff'
+
 def path_for(lang, page=''):
     return '/' + (lang + '/' if lang != 'fr' else '') + page
 
@@ -31,7 +38,7 @@ def render(lang, page, title, body, config=None):
     # The 404 page is served for any missing URL: no canonical nor alternates, and kept out of the index.
     alternates = '' if page == '404.html' else ''.join(f'<link rel="alternate" hreflang="{code}" href="{SITE_URL}{path_for(code, page)}">' for code in LANGUAGES)
     seo = '<meta name="robots" content="noindex">' if page == '404.html' else f'<link rel="canonical" href="{SITE_URL}{path_for(lang, page)}">'
-    switch = ' '.join(f'<a data-language href="{path_for(code, page)}" lang="{code}" hreflang="{code}">{code.upper()}</a>' for code in LANGUAGES)
+    switch = ' '.join(f'<a data-language href="{path_for(code, page)}" lang="{code}" hreflang="{code}"{' aria-current="page"' if code == lang else ''}>{code.upper()}</a>' for code in LANGUAGES)
     head = f'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{esc(title)}</title><meta name="description" content="{esc(texts["description"])}">{seo}{alternates}<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v={short_hash(SITE / "styles.css")}">'
     header = f'<header class="site-header"><a href="{path_for(lang)}">{esc(texts["site_title"])}</a><nav aria-label="{esc(texts["languages"])}">{switch}</nav></header>'
     footer = f'<footer class="site-footer"><p><a href="{path_for(lang, "mentions-legales/")}">{esc(texts["legal_title"])}</a> · <a href="{GITHUB_URL}">{esc(texts["source_code"])}</a></p><p>{texts["credits"]}</p><p>{texts["translation_notice"]}</p></footer>'
@@ -45,7 +52,7 @@ def render(lang, page, title, body, config=None):
     return f'<!doctype html><html lang="{lang}"><head>{head}</head><body>{header}<main class="page">{body}</main>{footer}{scripts}</body></html>'
 
 def faq(texts, sources=None):
-    content = ''.join(f'<details><summary>{esc(texts[key + "_q"])}</summary><p>{texts[key + "_a"]}</p></details>' for key in ('method', 'bus', 'sources', 'limits'))
+    content = ''.join(f'<details class="faq"><summary>{esc(texts[key + "_q"])}</summary><p>{texts[key + "_a"]}</p></details>' for key in ('method', 'bus', 'sources', 'limits'))
     if sources:
         gtfs = sources['gtfs']
         period = gtfs.get('servicePeriod') or []
@@ -66,8 +73,7 @@ def render_city(city, cities, lang):
     for line in lines:
         info = line if line.get('longName') else next((info for info in data['routeInfo'].values() if info['name'] == line['name'] and info['mode'] == line['mode']), line)
         color = line['color']
-        value = int(color.lstrip('#'), 16)
-        foreground = '#111' if .299 * (value >> 16) + .587 * ((value >> 8) & 255) + .114 * (value & 255) > 150 else '#fff'
+        foreground = contrast_text(color)
         rows.append(f'<tr><td><span class="line-badge" title="{esc(info.get("longName", line["name"]))}" style="background:{esc(color)};color:{foreground}">{esc(line["name"])}</span> {esc(info.get("longName") or texts["mode_" + line["mode"]])}</td><td>{line["stations"]}</td><td>~{esc(texts["minutes"].format(n=f'{line["headway"]:g}'))}</td></tr>')
     items = ''.join(f'<a class="city-item" data-name="{esc(other["name"])}" href="{path_for(lang, other["path"])}">{esc(other["name"])}</a>' for other in cities)
     others = ''.join(f'<a href="{path_for(lang, other["path"])}">{esc(other["name"])}</a>' for other in cities if other['slug'] != city['slug'])
@@ -85,7 +91,7 @@ def main():
         texts = translations(lang)
         cards = ''.join(f'<a class="city-card" href="{path_for(lang, city["path"])}"><h2>{esc(texts["map_" + city["areaKey"]])}</h2><p>{esc(city["name"])}</p></a>' for city in cities)
         home = Template((ROOT / 'templates/home.html').read_text(encoding='utf-8')).substitute(site_title=esc(texts['site_title']), description=esc(texts['description']), city_cards=cards, faq_html=faq(texts))
-        pages = {'': render(lang, '', texts['site_title'], home), 'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{texts["licences"]}</p>')}
+        pages = {'': render(lang, '', texts['site_title'], home), 'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{texts["licences"]}</p></section>')}
         for city in cities:
             pages[city['path']] = render_city(city, cities, lang)
         for page, content in pages.items():

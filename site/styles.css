@@ -1,10 +1,10 @@
 :root {
   --green: #3aa70b;
-  --green-strong: #2f8a08;
+  --green-strong: #246b06;
   --green-soft: #eaf6e3;
   --ink: #111111;
   --ink-soft: #4b4b4b;
-  --muted: #7a7a7a;
+  --muted: #626262;
   --line: #e6e6e6;
   --surface: #ffffff;
   --surface-alt: #f7f7f5;
@@ -219,7 +219,7 @@ a {
 }
 
 .city-panel-head input:focus {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
   border-color: transparent;
 }
@@ -343,6 +343,7 @@ h1 {
 .search {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: min(560px, 100%);
   margin-top: 26px;
@@ -360,7 +361,7 @@ h1 {
 }
 
 .search input:focus {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
   border-color: transparent;
 }
@@ -425,11 +426,11 @@ h1 {
 .button.primary {
   border-color: var(--green);
   background: var(--green);
-  color: #fff;
+  color: var(--ink);
 }
 
 .button.primary:hover {
-  background: var(--green-strong);
+  filter: brightness(1.06);
 }
 
 .icon-button {
@@ -1200,6 +1201,8 @@ output {
 }
 
 .toast {
+  max-width: calc(100vw - 32px);
+  overflow-wrap: anywhere;
   position: fixed;
   left: 50%;
   bottom: 24px;
@@ -1305,8 +1308,17 @@ output {
 }
 
 /* Shared page navigation and map links. */
-.site-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 4%; }
+.site-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; max-width:1120px; margin-inline:auto; padding:1rem 16px; }
 .site-header nav { display:flex; gap:.8rem; }
+.site-header nav a[aria-current="page"] { color:var(--ink); font-weight:700; text-decoration-thickness:2px; }
+.legal-copy { max-width:880px; margin-inline:auto; line-height:1.6; color:var(--ink-soft, var(--ink)); }
+.search .trip-hint { flex-basis:100%; margin:0; }
+.search .trip-hint:empty { display:none; }
+:where(a, button, input, summary, canvas):focus-visible { outline:3px solid var(--ink); outline-offset:3px; }
+.pill-toggle:has(input:focus-visible) { outline:3px solid var(--ink); outline-offset:3px; }
+.map-crosshair { position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; pointer-events:none; display:none;
+  background:linear-gradient(var(--ink),var(--ink)) center/2px 100% no-repeat, linear-gradient(var(--ink),var(--ink)) center/100% 2px no-repeat; }
+#mapCanvas:focus-visible ~ .map-crosshair { display:block; }
 .site-footer { max-width:1120px; margin:2rem auto; padding:1rem 24px; color:var(--muted, #555); font-size:.9rem; }
 .city-panel-list .city-item { padding:1rem; }
 .city-card { padding:1.5rem; }

@@ -66,8 +66,8 @@
   "limits_a": "No. Times are estimates based on scheduled services. Disruptions and individual walking streets are not included.",
   "reference": "Reference day: {date}. GTFS validity: {period}. Downloaded: {fetched}.",
   "stat_reach": "of rail and tram stations within 30 min of the centre ({center})",
-  "stat_frequency": "between services on line {line}, the most frequent line",
-  "stat_farthest": "from the centre to {station}, the farthest station",
+  "stat_frequency": "between services on line {line}",
+  "stat_farthest": "from the centre to {station}",
   "stats_title": "{name} in numbers",
   "stations": "Stations",
   "headway": "Service interval",
@@ -110,5 +110,9 @@
   "minute_15": "15 min",
   "minute_30": "30 min",
   "minute_45": "45 min",
-  "minute_60": "60 min"
+  "minute_60": "60 min",
+  "map_keyboard_help": "Arrow keys: move the map. Enter: choose a destination at the centre. Shift + Enter: choose a start at the centre.",
+  "load_retry": "Reload the page to try again.",
+  "searching": "Searching...",
+  "no_results": "No results in this area."
 }

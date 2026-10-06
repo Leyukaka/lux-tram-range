@@ -1,5 +1,5 @@
       <section class="hero">
-        <h1><button id="cityTrigger" type="button" class="city-trigger" aria-haspopup="dialog" aria-expanded="false">${headline}</button></h1>
+        <h1><button id="cityTrigger" type="button" class="city-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="cityPanel">${headline}</button></h1>
         <div id="cityPanel" class="city-panel" role="dialog" aria-label="${choose_map}" hidden>
           <div class="city-panel-head">
             <input id="citySearch" type="search" placeholder="${search_map}" aria-label="${search_map}" autocomplete="off" />
@@ -12,19 +12,22 @@ ${city_items}
         <p class="lede">${description}</p>
         <form id="searchForm" class="search" role="search" autocomplete="off">
           <label class="visually-hidden" for="searchInput">${departure_address}</label>
-          <input id="searchInput" type="search" placeholder="${search_placeholder}" />
-          <button type="submit" class="button primary">${start_here}</button>
+          <input id="searchInput" type="search" placeholder="${search_placeholder}" aria-describedby="searchStatus" disabled data-needs-data />
+          <button type="submit" class="button primary" disabled data-needs-data>${start_here}</button>
           <ul id="searchResults" class="search-results" hidden></ul>
+          <p id="searchStatus" class="trip-hint" role="status" aria-live="polite"></p>
         </form>
         <ol class="steps"><li>${step_one}</li><li>${step_two}</li><li>${step_three}</li></ol>
       </section>
 
-      <section class="map-card" aria-label="${map_label}">
+      <section id="mapCard" class="map-card" aria-label="${map_label}" aria-busy="true">
         <noscript>
           <p class="noscript">${noscript}</p>
         </noscript>
         <div id="mapStage" class="map-stage">
-          <canvas id="mapCanvas"></canvas>
+          <canvas id="mapCanvas" tabindex="0" aria-label="${map_label}" aria-describedby="mapKeyboardHelp"></canvas>
+          <div class="map-crosshair" aria-hidden="true"></div>
+          <p id="mapKeyboardHelp" class="visually-hidden">${map_keyboard_help}</p>
 
           <aside id="tripPanel" class="trip-panel" aria-live="polite">
             <p class="trip-eyebrow">${departure}</p>
@@ -55,8 +58,8 @@ ${city_items}
             <button id="fullscreen" type="button" class="icon-button" aria-label="${fullscreen}">⤢</button>
           </div>
 
-          <div class="legend" aria-hidden="true">
-            <div id="legendBar" class="legend-bar"></div>
+          <div class="legend" role="group" aria-label="${scale}">
+            <div id="legendBar" class="legend-bar" aria-hidden="true"></div>
             <div class="legend-labels"><span>0</span><span id="legendMid"></span><span id="legendMax"></span></div>
           </div>
         </div>

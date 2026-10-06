@@ -66,8 +66,8 @@
   "limits_a": "Non. Les durées sont des estimations à partir des horaires théoriques. Elles ne tiennent pas compte des perturbations ni de chaque rue empruntée à pied.",
   "reference": "Jour de référence : {date}. Validité GTFS : {period}. Téléchargement : {fetched}.",
   "stat_reach": "des gares et stations de tram à moins de 30 min du centre ({center})",
-  "stat_frequency": "entre deux passages sur la ligne {line}, la plus fréquente",
-  "stat_farthest": "depuis le centre vers {station}, la station la plus éloignée",
+  "stat_frequency": "entre deux passages sur la ligne {line}",
+  "stat_farthest": "depuis le centre vers {station}",
   "stats_title": "{name} en chiffres",
   "stations": "Stations",
   "headway": "Un passage toutes les",
@@ -110,5 +110,9 @@
   "minute_15": "15 min",
   "minute_30": "30 min",
   "minute_45": "45 min",
-  "minute_60": "60 min"
+  "minute_60": "60 min",
+  "map_keyboard_help": "Flèches : déplacer la carte. Entrée : choisir une arrivée au centre. Maj + Entrée : choisir un départ au centre.",
+  "load_retry": "Réessayez en rechargeant la page.",
+  "searching": "Recherche...",
+  "no_results": "Aucun résultat dans cette zone."
 }

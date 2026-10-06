@@ -66,8 +66,8 @@
   "limits_a": "Nein. Die Zeiten sind Schätzungen anhand der Fahrpläne. Störungen und einzelne Straßen auf Fußwegen werden nicht berücksichtigt.",
   "reference": "Referenztag: {date}. GTFS-Gültigkeit: {period}. Heruntergeladen: {fetched}.",
   "stat_reach": "der Bahnhöfe und Tramhaltestellen innerhalb von 30 Min. vom Zentrum ({center})",
-  "stat_frequency": "zwischen Fahrten auf Linie {line}, der häufigsten Linie",
-  "stat_farthest": "vom Zentrum nach {station}, der entferntesten Haltestelle",
+  "stat_frequency": "zwischen Fahrten auf Linie {line}",
+  "stat_farthest": "vom Zentrum nach {station}",
   "stats_title": "{name} in Zahlen",
   "stations": "Haltestellen",
   "headway": "Takt",
@@ -110,5 +110,9 @@
   "minute_15": "15 Min.",
   "minute_30": "30 Min.",
   "minute_45": "45 Min.",
-  "minute_60": "60 Min."
+  "minute_60": "60 Min.",
+  "map_keyboard_help": "Pfeiltasten: Karte verschieben. Eingabe: Ziel in der Mitte wählen. Umschalt + Eingabe: Start in der Mitte wählen.",
+  "load_retry": "Laden Sie die Seite neu, um es erneut zu versuchen.",
+  "searching": "Suche...",
+  "no_results": "Keine Ergebnisse in diesem Gebiet."
 }
