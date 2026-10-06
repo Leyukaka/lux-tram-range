@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Sources brutes (GTFS, communes, OSM) : gardées en local, retéléchargées par fetch_data.py.
+# Leur provenance (URL, date, empreinte SHA-256) est versionnée dans sources/<ville>.json.
+/data/
