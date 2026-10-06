@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-10",
+  "window": ["08:00", "08:30"],
+  "note": "Trajets d'arrêt à arrêt. Les temps de référence sont relevés à la main sur mobiliteit.lu et Google Maps (references.json).",
+  "trips": [
+    { "id": "gare-luxexpo", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Kirchberg, Luxexpo", "lat": 49.635423, "lon": 6.175902 } },
+    { "id": "gare-hamilius", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Hamilius", "lat": 49.611094, "lon": 6.126139 } },
+    { "id": "gare-cloche-dor", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Gasperich, Cloche d'Or", "lat": 49.583476, "lon": 6.115351 } },
+    { "id": "philharmonie-belair", "from": { "name": "Kirchberg, Philharmonie / Mudam", "lat": 49.619486, "lon": 6.142026 }, "to": { "name": "Belair, Sacré-Coeur", "lat": 49.610276, "lon": 6.113159 } },
+    { "id": "gare-esch", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Esch-sur-Alzette, Gare", "lat": 49.493911, "lon": 5.985087 } },
+    { "id": "gare-mersch", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Mersch, Gare", "lat": 49.751844, "lon": 6.110298 } },
+    { "id": "gare-ettelbruck", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Ettelbruck, Gare", "lat": 49.847968, "lon": 6.107725 } },
+    { "id": "gare-clervaux", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Clervaux, Gare", "lat": 50.061583, "lon": 6.024627 } },
+    { "id": "gare-wiltz", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Wiltz, Gare", "lat": 49.966369, "lon": 5.927075 } },
+    { "id": "gare-echternach", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Echternach, Gare Centre", "lat": 49.81023, "lon": 6.417321 } },
+    { "id": "gare-remich", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Remich, Gare routière", "lat": 49.542737, "lon": 6.368293 } },
+    { "id": "gare-vianden", "from": { "name": "Luxembourg, Gare Centrale", "lat": 49.599969, "lon": 6.13424 }, "to": { "name": "Vianden, Gare", "lat": 49.933484, "lon": 6.212653 } },
+    { "id": "esch-belval", "from": { "name": "Esch-sur-Alzette, Gare", "lat": 49.493911, "lon": 5.985087 }, "to": { "name": "Belval (Université), Gare", "lat": 49.49955, "lon": 5.946283 } },
+    { "id": "ettelbruck-diekirch", "from": { "name": "Ettelbruck, Gare", "lat": 49.847968, "lon": 6.107725 }, "to": { "name": "Diekirch, Gare", "lat": 49.864733, "lon": 6.15407 } }
+  ]
+}
