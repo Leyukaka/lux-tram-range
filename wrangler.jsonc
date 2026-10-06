@@ -1,5 +1,8 @@
 {
   "name": "lux-tram-range",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./site", "not_found_handling": "404-page" }
+  "assets": { "directory": "./site", "not_found_handling": "404-page" },
+  // Domaine du site ; l'adresse workers.dev reste active pour les anciens liens.
+  "routes": [{ "pattern": "tram.kwikviz.com", "custom_domain": true }],
+  "workers_dev": true
 }

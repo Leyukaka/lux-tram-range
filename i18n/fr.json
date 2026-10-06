@@ -114,5 +114,6 @@
   "map_keyboard_help": "Flèches : déplacer la carte. Entrée : choisir une arrivée au centre. Maj + Entrée : choisir un départ au centre.",
   "load_retry": "Réessayez en rechargeant la page.",
   "searching": "Recherche...",
-  "no_results": "Aucun résultat dans cette zone."
+  "no_results": "Aucun résultat dans cette zone.",
+  "made_by": "Réalisé par {name}"
 }

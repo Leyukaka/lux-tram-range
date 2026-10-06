@@ -114,5 +114,6 @@
   "map_keyboard_help": "Pfeiltasten: Karte verschieben. Eingabe: Ziel in der Mitte wählen. Umschalt + Eingabe: Start in der Mitte wählen.",
   "load_retry": "Laden Sie die Seite neu, um es erneut zu versuchen.",
   "searching": "Suche...",
-  "no_results": "Keine Ergebnisse in diesem Gebiet."
+  "no_results": "Keine Ergebnisse in diesem Gebiet.",
+  "made_by": "Erstellt von {name}"
 }

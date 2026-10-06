@@ -114,5 +114,6 @@
   "map_keyboard_help": "Arrow keys: move the map. Enter: choose a destination at the centre. Shift + Enter: choose a start at the centre.",
   "load_retry": "Reload the page to try again.",
   "searching": "Searching...",
-  "no_results": "No results in this area."
+  "no_results": "No results in this area.",
+  "made_by": "Made by {name}"
 }

@@ -2,7 +2,7 @@
 
 Carte des temps de trajet en train, tram, funiculaire et bus pour tout le Luxembourg, ouverte sur Luxembourg-Ville. Les bus sont inclus par défaut. Calcul dans le navigateur, sans cookies ni mesure d'audience.
 
-Site : https://lux-tram-range.yann-badre.workers.dev
+Site : https://tram.kwikviz.com
 
 ## Construire, tester et publier
 
@@ -40,3 +40,7 @@ Pour ajouter le luxembourgeois, copier `i18n/fr.json` vers `i18n/lb.json`, tradu
 [Anthony Castrio, NYC Transit Time Cartogram](https://castrio.me/nyc/) → [Jules Grandin, Paris](https://github.com/JulesGrandin/paris-temps-transport) → [Camille Roux, À portée de tram](https://tram.camilleroux.com/) → [Leyukaka, portage Luxembourg](https://github.com/Leyukaka/lux-tram-range).
 
 Le code original [camilleroux/montpellier-temps-transport](https://github.com/camilleroux/montpellier-temps-transport) a été importé au commit `59c7b13`. Code sous MIT, notices Camille Roux et Leyukaka conservées dans [LICENSE](LICENSE). Bases calculées sous [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), avec attribution OpenStreetMap et ATP (CC-BY 4.0).
+
+## Auteur
+
+Leyukaka : [GitHub](https://github.com/Leyukaka)

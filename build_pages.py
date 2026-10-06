@@ -10,8 +10,10 @@ from cities import load_cities
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
 SITE_NAME = 'lux-tram-range'
-SITE_URL = os.environ.get('SITE_URL', 'https://lux-tram-range.yann-badre.workers.dev').rstrip('/')
+SITE_URL = os.environ.get('SITE_URL', 'https://tram.kwikviz.com').rstrip('/')
 GITHUB_URL = 'https://github.com/Leyukaka/lux-tram-range'
+# Author links shown in the footer and the legal page (an empty link is left out).
+AUTHOR = {'name': 'Leyukaka', 'GitHub': 'https://github.com/Leyukaka', 'LinkedIn': ''}
 LICENCES = {'cc-by': ('CC-BY 4.0', 'https://creativecommons.org/licenses/by/4.0/'), 'odbl': ('ODbL 1.0', 'https://opendatacommons.org/licenses/odbl/1-0/')}
 LANGUAGES = ('fr', 'en', 'de')
 esc = html.escape
@@ -22,6 +24,10 @@ def short_hash(path):
 def translations(lang):
     reference = json.loads((ROOT / 'i18n/fr.json').read_text(encoding='utf-8'))
     return {**reference, **json.loads((ROOT / f'i18n/{lang}.json').read_text(encoding='utf-8'))}
+
+def author_line(texts):
+    links = ' · '.join(f'<a href="{esc(url)}" rel="author">{esc(label)}</a>' for label, url in AUTHOR.items() if label != 'name' and url)
+    return f'{esc(texts["made_by"].format(name=AUTHOR["name"]))}' + (f' · {links}' if links else '')
 
 def contrast_text(color):
     """Black or white text on a line colour, whichever has the higher WCAG contrast (same rule as site/app.js)."""
@@ -41,7 +47,7 @@ def render(lang, page, title, body, config=None):
     switch = ' '.join(f'<a data-language href="{path_for(code, page)}" lang="{code}" hreflang="{code}"{' aria-current="page"' if code == lang else ''}>{code.upper()}</a>' for code in LANGUAGES)
     head = f'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{esc(title)}</title><meta name="description" content="{esc(texts["description"])}">{seo}{alternates}<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v={short_hash(SITE / "styles.css")}">'
     header = f'<header class="site-header"><a href="{path_for(lang)}">{esc(texts["site_title"])}</a><nav aria-label="{esc(texts["languages"])}">{switch}</nav></header>'
-    footer = f'<footer class="site-footer"><p><a href="{path_for(lang, "mentions-legales/")}">{esc(texts["legal_title"])}</a> · <a href="{GITHUB_URL}">{esc(texts["source_code"])}</a></p><p>{texts["credits"]}</p><p>{esc(texts["translation_notice"])}</p></footer>'
+    footer = f'<footer class="site-footer"><p><a href="{path_for(lang, "mentions-legales/")}">{esc(texts["legal_title"])}</a> · <a href="{GITHUB_URL}">{esc(texts["source_code"])}</a></p><p>{author_line(texts)}</p><p>{texts["credits"]}</p><p>{esc(texts["translation_notice"])}</p></footer>'
     blob = json.dumps({'fallback': translations('fr'), 'messages': texts}, ensure_ascii=False).replace('</', '<\\/')
     scripts = f'<script id="i18n" type="application/json">{blob}</script>'
     if config:
@@ -89,7 +95,7 @@ def main():
     urls = []
     for lang in LANGUAGES:
         texts = translations(lang)
-        pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{esc(texts["licences"])}</p></section>')}
+        pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{author_line(texts)}</p><p>{esc(texts["licences"])}</p></section>')}
         for city in cities:
             pages[city['path']] = render_city(city, cities, lang)
         for page, content in pages.items():
