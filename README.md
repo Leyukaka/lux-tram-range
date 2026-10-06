@@ -37,10 +37,10 @@ Pour ajouter le luxembourgeois, copier `i18n/fr.json` vers `i18n/lb.json`, tradu
 
 ## Crédits et licences
 
-[Anthony Castrio, NYC Transit Time Cartogram](https://castrio.me/nyc/) → [Jules Grandin, Paris](https://github.com/JulesGrandin/paris-temps-transport) → [Camille Roux, À portée de tram](https://tram.camilleroux.com/) → [Leyukaka, portage Luxembourg](https://github.com/Leyukaka/lux-tram-range).
+[Anthony Castrio, NYC Transit Time Cartogram](https://castrio.me/nyc/) → [Jules Grandin, Paris](https://github.com/JulesGrandin/paris-temps-transport) → [Camille Roux, À portée de tram](https://tram.camilleroux.com/) → [Badré Yann, portage Luxembourg](https://github.com/Leyukaka/lux-tram-range).
 
-Le code original [camilleroux/montpellier-temps-transport](https://github.com/camilleroux/montpellier-temps-transport) a été importé au commit `59c7b13`. Code sous MIT, notices Camille Roux et Leyukaka conservées dans [LICENSE](LICENSE). Bases calculées sous [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), avec attribution OpenStreetMap et ATP (CC-BY 4.0).
+Le code original [camilleroux/montpellier-temps-transport](https://github.com/camilleroux/montpellier-temps-transport) a été importé au commit `59c7b13`. Code sous MIT, notices Camille Roux et Badré Yann conservées dans [LICENSE](LICENSE). Bases calculées sous [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), avec attribution OpenStreetMap et ATP (CC-BY 4.0).
 
 ## Auteur
 
-Leyukaka : [GitHub](https://github.com/Leyukaka) · [LinkedIn](https://www.linkedin.com/in/yann-badr%C3%A9-26852733/)
+Badré Yann : [GitHub](https://github.com/Leyukaka) · [LinkedIn](https://www.linkedin.com/in/yann-badr%C3%A9-26852733/)
