@@ -1,6 +1,6 @@
 {
   "city": "Luxembourg",
-  "builtAt": "2026-10-06T16:11:16+00:00",
+  "builtAt": "2026-10-06T16:27:55+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h-20h",
   "gtfs": {
@@ -44,18 +44,18 @@
       "sha256": "d1c394c9756131d90e8881e1b9d12aa9cb016c36956246da1b8ce1ad217d6994"
     },
     "osm_rivers": {
-      "source": "Overpass API: [out:json][timeout:110];way[\"waterway\"~\"^(river)$\"][\"name\"~\"^(Alzette|Sûre|Moselle)( - .*)?$\"][\"tunnel\"!~\".\"](49.44,5.72,50.19,6.54);out geom;",
+      "source": "Overpass API: [out:json][timeout:110];way[\"waterway\"~\"^(river|stream)$\"][\"name\"~\"^(Alzette|Pétrusse|Sûre|Moselle)( - .*)?$\"][\"tunnel\"!~\".\"](49.44,5.72,50.19,6.54);out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T13:45:00+00:00",
-      "bytes": 190641,
-      "sha256": "36b280c54adde64c389fe72f5e1038ff19ee858b7fb205b834a0ddc64ea51aae"
+      "fetchedAt": "2026-10-06T16:20:09+00:00",
+      "bytes": 219460,
+      "sha256": "a301f9f23e2f9ef0f4e7bb7915505bfa03aec3da30e9f10553bfafc38c24e1d6"
     },
     "osm_bridges": {
       "source": "Overpass API: [out:json][timeout:110];way[\"bridge\"][\"highway\"][\"highway\"!~\"^(motorway|motorway_link|trunk|trunk_link|construction|proposed)$\"][\"foot\"!=\"no\"](49.44,5.72,50.19,6.54);out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T13:52:45+00:00",
-      "bytes": 2264241,
-      "sha256": "9dbcacf787f10fd27de8adf917bddd6d2d71b17ed069df0cfcc40b7ef059a6c0"
+      "fetchedAt": "2026-10-06T16:25:32+00:00",
+      "bytes": 2264294,
+      "sha256": "252049b1ad19f4af39c8d241908bc965fce9f7206ccced4a976b6d617a677717"
     }
   },
   "railGeometry": "GTFS shapes.txt",

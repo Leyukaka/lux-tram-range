@@ -1,4 +1,5 @@
 import fs from "fs";
+import { decode } from "../site/data-format.mjs";
 // Comparaison des temps du modèle avec des calculateurs d'itinéraire (mobiliteit.lu, Google Maps).
 // Usage : node tools/compare_trips.mjs [carte]   (carte par défaut : luxembourg)
 //
@@ -7,7 +8,7 @@ import fs from "fs";
 // correspondances (départ, arrivée) autour de la fenêtre : on en déduit le temps moyen porte à porte d'un voyageur
 // qui se présente à une minute quelconque de la fenêtre (attente comprise), comme le modèle.
 const slug = process.argv[2] || "luxembourg";
-const d = JSON.parse(fs.readFileSync(`site/data/${slug}.json`));
+const d = decode(JSON.parse(fs.readFileSync(`site/data/${slug}.json`)));
 const bench = JSON.parse(fs.readFileSync("docs/benchmark/trips.json"));
 const refs = fs.existsSync("docs/benchmark/references.json") ? JSON.parse(fs.readFileSync("docs/benchmark/references.json")) : {};
 const rs = d.routeStates, st = d.stations, ri = d.routeInfo;

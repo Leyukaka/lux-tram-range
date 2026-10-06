@@ -1,5 +1,8 @@
 # Conception : lux-tram-range
 
+> Depuis le 2026-10-06, une seule Carte couvre le pays : la section « Carte unique » ci-dessous remplace ce
+> qui est dit plus haut des deux Cartes (`luxembourg-ville`, `luxembourg`).
+
 ## Vue d'ensemble
 
 Le projet part du code de `camilleroux/montpellier-temps-transport` (MIT) et le garde au plus près.

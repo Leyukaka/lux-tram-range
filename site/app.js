@@ -1,3 +1,4 @@
+import { decode } from "./data-format.mjs";
 // Carte des temps de trajet en transports en commun (tram.camilleroux.com).
 // La ville affichée est décrite par le bloc JSON #city-config de la page.
 // Luxembourg transport travel times.
@@ -70,6 +71,7 @@ const app = {
   to: null, // { point, label }
   includeBus: true,
   maxMinutes: DEFAULT_MAX,
+  autoScale: true, // échelle et isochrones suivent le zoom tant que l'utilisateur n'y touche pas
   isochrones: [...DEFAULT_ISOCHRONES],
   heatFrom: "from", // la heatmap part du départ ou de l'arrivée
   solution: null, // plus courts chemins depuis le départ (panneau, itinéraire)
@@ -646,16 +648,40 @@ function fitView() {
   const { width, height } = app.size;
   const pad = width < 720 ? 12 : 40;
   const scale = Math.min((width - pad * 2) / (maxX - minX), (height - pad * 2) / (maxY - minY));
-  app.view = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale, fitScale: scale };
+  // La carte s'ouvre sur la ville (viewBounds) ; le zoom arrière va jusqu'au pays entier (bounds).
+  const [bx0, by0, bx1, by1] = app.data.meta.bounds;
+  const wholeScale = Math.min((width - pad * 2) / (bx1 - bx0), (height - pad * 2) / (by1 - by0));
+  app.view = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale, fitScale: scale, minScale: Math.min(scale * MIN_ZOOM_FACTOR, wholeScale * 0.9) };
+  autoScale();
+}
+
+/**
+ * Échelle automatique : 45 min quand une douzaine de kilomètres sont visibles (la ville), jusqu'à 90 min pour le
+ * pays entier ; isochrones 15/30 puis 30/60. Coupée dès que l'utilisateur règle l'échelle ou les isochrones.
+ */
+function autoScale() {
+  if (!app.autoScale || !app.data) return;
+  const visibleKm = app.size.width / app.view.scale / 1000;
+  const t = clamp((visibleKm - 12) / (70 - 12), 0, 1);
+  const max = Math.round((45 + t * 45) / 5) * 5;
+  const isochrones = max < 60 ? [15, 30] : [30, 60];
+  if (max === app.maxMinutes && isochrones.join() === app.isochrones.join()) return;
+  app.maxMinutes = max;
+  app.isochrones = isochrones;
+  $("maxRange").value = String(max);
+  for (const input of $("isoToggles").querySelectorAll("input")) input.checked = isochrones.includes(Number(input.value));
+  updateLegend();
+  if (app.grid) paintHeat(app.grid);
 }
 
 function zoomAt(factor, screenX, screenY) {
   const before = unproject(screenX, screenY);
   const { fitScale } = app.view;
-  app.view.scale = clamp(app.view.scale * factor, fitScale * MIN_ZOOM_FACTOR, fitScale * MAX_ZOOM_FACTOR);
+  app.view.scale = clamp(app.view.scale * factor, app.view.minScale ?? fitScale * MIN_ZOOM_FACTOR, fitScale * MAX_ZOOM_FACTOR);
   const after = unproject(screenX, screenY);
   app.view.cx += before[0] - after[0];
   app.view.cy += before[1] - after[1];
+  autoScale();
   requestRender();
 }
 
@@ -902,6 +928,7 @@ function resize() {
   } else {
     app.view.scale *= ratio;
     app.view.fitScale *= ratio;
+    if (app.view.minScale) app.view.minScale *= ratio;
   }
   requestRender();
 }
@@ -1071,9 +1098,11 @@ function syncUrl() {
   if (app.to) params.set("to", formatPair(app.to.point));
   if (app.to && app.heatFrom === "to") params.set("carte", "arrivee");
   if (!app.includeBus) params.set("bus", "0");
-  if (app.maxMinutes !== DEFAULT_MAX) params.set("max", String(app.maxMinutes));
-  const iso = [...app.isochrones].sort((a, b) => a - b).join(",");
-  if (iso !== DEFAULT_ISOCHRONES.join(",")) params.set("iso", iso || "0");
+  if (!app.autoScale) {
+    // Échelle et isochrones choisies à la main : le lien les garde. En mode automatique, elles suivent le zoom.
+    params.set("max", String(app.maxMinutes));
+    params.set("iso", [...app.isochrones].sort((a, b) => a - b).join(",") || "0");
+  }
   const query = params.toString().replaceAll("%2C", ",");
   history.replaceState(null, "", query ? `?${query}` : location.pathname);
   for (const link of document.querySelectorAll("a[data-language]")) link.search = location.search;
@@ -1084,6 +1113,7 @@ function restoreFromUrl() {
   app.includeBus = params.get("bus") !== "0";
   $("busToggle").checked = app.includeBus;
   const max = Number(params.get("max"));
+  if (params.has("max") || params.has("iso")) app.autoScale = false;
   if (max >= 20 && max <= SCALE_MAX && max % 5 === 0) app.maxMinutes = max;
   $("maxRange").max = String(SCALE_MAX);
   $("maxRange").value = String(app.maxMinutes);
@@ -1221,7 +1251,7 @@ canvas.addEventListener(
 const cityPanel = $("cityPanel");
 const cityTrigger = $("cityTrigger");
 const citySearch = $("citySearch");
-const cityItems = [...cityPanel.querySelectorAll(".city-item")];
+const cityItems = cityPanel ? [...cityPanel.querySelectorAll(".city-item")] : [];
 
 function setCityPanel(open) {
   cityPanel.hidden = !open;
@@ -1241,26 +1271,28 @@ function filterCities() {
   for (const item of cityItems) item.hidden = !normalize(item.dataset.name).split(" ").some((word) => word.startsWith(query));
 }
 
-cityTrigger.addEventListener("click", (event) => {
-  event.stopPropagation();
-  setCityPanel(cityPanel.hidden);
-});
-$("cityClose").addEventListener("click", () => setCityPanel(false));
-citySearch.addEventListener("input", filterCities);
-citySearch.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  const first = cityItems.find((item) => !item.hidden);
-  if (first) location.href = first.href;
-});
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !cityPanel.hidden) {
-    setCityPanel(false);
-    cityTrigger.focus();
-  }
-});
-document.addEventListener("click", (event) => {
-  if (!cityPanel.hidden && !cityPanel.contains(event.target)) setCityPanel(false);
-});
+if (cityPanel) {
+  cityTrigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setCityPanel(cityPanel.hidden);
+  });
+  $("cityClose").addEventListener("click", () => setCityPanel(false));
+  citySearch.addEventListener("input", filterCities);
+  citySearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const first = cityItems.find((item) => !item.hidden);
+    if (first) location.href = first.href;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !cityPanel.hidden) {
+      setCityPanel(false);
+      cityTrigger.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!cityPanel.hidden && !cityPanel.contains(event.target)) setCityPanel(false);
+  });
+}
 
 $("zoomIn").addEventListener("click", () => zoomAt(1.4, app.size.width / 2, app.size.height / 2));
 $("zoomOut").addEventListener("click", () => zoomAt(1 / 1.4, app.size.width / 2, app.size.height / 2));
@@ -1282,12 +1314,14 @@ $("busToggle").addEventListener("change", (event) => {
 });
 
 $("isoToggles").addEventListener("change", () => {
+  app.autoScale = false;
   app.isochrones = [...$("isoToggles").querySelectorAll("input:checked")].map((input) => Number(input.value));
   requestRender();
   syncUrl();
 });
 
 $("maxRange").addEventListener("input", (event) => {
+  app.autoScale = false;
   app.maxMinutes = Number(event.target.value);
   updateLegend();
   if (app.grid) paintHeat(app.grid);
@@ -1504,7 +1538,7 @@ document.addEventListener("click", (event) => {
 async function init() {
   resize();
   const response = await fetch(DATA_URL);
-  app.data = await response.json();
+  app.data = decode(await response.json());
   app.offset = [app.data.meta.bounds[0], app.data.meta.bounds[1]];
   app.graph = prepareGraph(app.data);
   app.rivers = indexRivers(app.data.rivers);

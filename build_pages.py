@@ -89,9 +89,7 @@ def main():
     urls = []
     for lang in LANGUAGES:
         texts = translations(lang)
-        cards = ''.join(f'<a class="city-card" href="{path_for(lang, city["path"])}"><h2>{esc(texts["map_" + city["areaKey"]])}</h2><p>{esc(city["name"])}</p></a>' for city in cities)
-        home = Template((ROOT / 'templates/home.html').read_text(encoding='utf-8')).substitute(site_title=esc(texts['site_title']), description=esc(texts['description']), city_cards=cards, faq_html=faq(texts))
-        pages = {'': render(lang, '', texts['site_title'], home), 'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{texts["licences"]}</p></section>')}
+        pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{texts["licences"]}</p></section>')}
         for city in cities:
             pages[city['path']] = render_city(city, cities, lang)
         for page, content in pages.items():

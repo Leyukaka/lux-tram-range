@@ -18,10 +18,10 @@
     "lon": 6.13364,
     "label": "Gare Centrale"
   },
-  "searchExample": "Esch-sur-Alzette",
+  "searchExample": "Place d'Armes",
   "published": "2026-10-06",
   "lat0": 49.8,
-  "gridCellMeters": 350,
+  "gridCellMeters": 200,
   "maxWait": 30,
   "splitTrainRoutes": true,
   "stopsBbox": [
@@ -62,13 +62,22 @@
   ],
   "rivers": [
     "Alzette",
+    "Pétrusse",
     "Sûre",
     "Moselle"
   ],
   "riverWaterways": [
-    "river"
+    "river",
+    "stream"
   ],
-  "defaultMax": 90,
+  "defaultMax": 45,
   "scaleMax": 150,
-  "ringSimplifyMeters": 100
+  "ringSimplifyMeters": 60,
+  "viewBbox": [
+    49.565,
+    6.065,
+    49.655,
+    6.205
+  ],
+  "path": ""
 }

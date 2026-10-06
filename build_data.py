@@ -1217,6 +1217,29 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
     }
 
 
+def compact_network(route_states, station_states, adjacency, cells, cols: int) -> dict:
+    """Format 2 of the bundle (meta.format = 2): columns instead of objects, flat edge lists, cells by grid rank.
+    A 200 m grid over the whole country holds about 65,000 cells: the original layout would not fit the 25 MiB
+    limit of a Workers asset. site/data-format.mjs turns it back into the original layout in the browser."""
+    route_ids = sorted({state["routeId"] for state in route_states})
+    route_index = {route_id: i for i, route_id in enumerate(route_ids)}
+    return {
+        "routeIds": route_ids,
+        "routeStates": {
+            "station": [state["stationIndex"] for state in route_states],
+            "route": [route_index[state["routeId"]] for state in route_states],
+            "wait": [state["wait"] for state in route_states],
+            "access": [state["access"] for state in route_states],
+        },
+        "stationStates": station_states,
+        "adjacency": [[value for edge in edges for value in edge] for edges in adjacency],
+        "cells": {
+            "index": [cell["row"] * cols + cell["col"] for cell in cells],
+            "access": [[value for station, meters in cell["access"] for value in (station, round(meters))] for cell in cells],
+        },
+    }
+
+
 def write_provenance(city: dict, data_dir: Path, gtfs_dir: Path, reference_date: date, route_info: Dict[str, dict], stations: Sequence[dict], stats: dict) -> Path:
     """Record in sources/<city>.json (versioned) which raw files were used, when they were fetched and what they cover."""
     manifest = {}
@@ -1345,6 +1368,7 @@ def main() -> None:
             "walkMetersPerMinute": WALK_METERS_PER_MINUTE,
             "originStationCount": ORIGIN_NEAREST_STATIONS,
             "transferWalk": TRANSFER_WALK,
+            "format": 2,
             "sea": bool(context),
         },
         "context": [serialize_polygon(polygon) for polygon in context],
@@ -1357,11 +1381,7 @@ def main() -> None:
         "routes": routes,
         "routeInfo": route_info,
         "stations": [{**station, "point": round_point(station["point"])} for station in stations],
-        "routeStates": route_states,
-        "stationStates": station_states,
-        "adjacency": adjacency,
-        "cells": cells,
-        "mask": mask,
+        **compact_network(route_states, station_states, adjacency, cells, cols),
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,14 +1,5 @@
       <section class="hero">
-        <h1><button id="cityTrigger" type="button" class="city-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="cityPanel">${headline}</button></h1>
-        <div id="cityPanel" class="city-panel" role="dialog" aria-label="${choose_map}" hidden>
-          <div class="city-panel-head">
-            <input id="citySearch" type="search" placeholder="${search_map}" aria-label="${search_map}" autocomplete="off" />
-            <button id="cityClose" type="button" class="icon-button" aria-label="${close}">×</button>
-          </div>
-          <nav class="city-panel-list" aria-label="${choose_map}">
-${city_items}
-          </nav>
-        </div>
+        <h1>${headline}</h1>
         <p class="lede">${description}</p>
         <form id="searchForm" class="search" role="search" autocomplete="off">
           <label class="visually-hidden" for="searchInput">${departure_address}</label>
@@ -108,9 +99,3 @@ ${line_rows}
 
       ${faq_html}
 
-      <section class="section" aria-labelledby="cities-title">
-        <h2 id="cities-title">${other_map}</h2>
-        <div class="city-grid">
-${other_maps}
-        </div>
-      </section>

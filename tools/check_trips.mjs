@@ -1,10 +1,11 @@
 import fs from "fs";
+import { decode } from "../site/data-format.mjs";
 // Sondage des trajets : temps depuis le centre jusqu'aux terminus et aux gares, avec la vitesse porte à porte.
 // Usage : node tools/check_trips.mjs <carte>
 // Une vitesse anormale est signalée par "!" ; les trajets de référence ("checks" de la config) hors fourchette
 // font échouer le script (code de sortie 1).
-const slug = process.argv[2];
-const d = JSON.parse(fs.readFileSync(`site/data/${slug}.json`));
+const slug = process.argv[2] || "luxembourg";
+const d = decode(JSON.parse(fs.readFileSync(`site/data/${slug}.json`)));
 const city = JSON.parse(fs.readFileSync(`cities/${slug}.json`));
 const rs = d.routeStates, st = d.stations, ri = d.routeInfo, rail = (r) => ri[r].rail;
 // Vitesse maximale crédible porte à porte, selon le mode le plus rapide emprunté.
