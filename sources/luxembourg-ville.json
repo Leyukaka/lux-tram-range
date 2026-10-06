@@ -1,6 +1,6 @@
 {
   "city": "Luxembourg-Ville",
-  "builtAt": "2026-10-06T15:31:14+00:00",
+  "builtAt": "2026-10-06T16:10:34+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h-20h",
   "gtfs": {
@@ -76,7 +76,7 @@
         "name": "IC",
         "longName": "IC Luxembourg - Pfaffenthal-Kirchberg",
         "mode": "train",
-        "color": "#8B1E3F",
+        "color": "#37474F",
         "stations": 2,
         "headway": 14.0
       },
@@ -84,7 +84,7 @@
         "name": "RB",
         "longName": "RB Luxembourg - Mamer",
         "mode": "train",
-        "color": "#E8707A",
+        "color": "#37474F",
         "stations": 1,
         "headway": 29.1
       },
@@ -92,7 +92,7 @@
         "name": "RB",
         "longName": "RB Luxembourg - Sandweiler-Contern",
         "mode": "train",
-        "color": "#E8707A",
+        "color": "#37474F",
         "stations": 3,
         "headway": 29.2
       },
@@ -100,7 +100,7 @@
         "name": "RB",
         "longName": "RB Heisdorf - Luxembourg",
         "mode": "train",
-        "color": "#E8707A",
+        "color": "#37474F",
         "stations": 5,
         "headway": 29.6
       },
@@ -108,7 +108,7 @@
         "name": "RB",
         "longName": "RB Leudelange - Luxembourg",
         "mode": "train",
-        "color": "#E8707A",
+        "color": "#37474F",
         "stations": 3,
         "headway": 29.5
       },
@@ -116,7 +116,7 @@
         "name": "RB",
         "longName": "RB Berchem - Luxembourg",
         "mode": "train",
-        "color": "#E8707A",
+        "color": "#37474F",
         "stations": 1,
         "headway": 29.8
       },
@@ -124,7 +124,7 @@
         "name": "RE",
         "longName": "RE Howald - Luxembourg",
         "mode": "train",
-        "color": "#D6001C",
+        "color": "#37474F",
         "stations": 1,
         "headway": 5.9
       },
@@ -132,7 +132,7 @@
         "name": "RE",
         "longName": "RE Howald - Walferdange",
         "mode": "train",
-        "color": "#D6001C",
+        "color": "#37474F",
         "stations": 6,
         "headway": 23.6
       },
@@ -140,7 +140,7 @@
         "name": "RE",
         "longName": "RE Luxembourg - Sandweiler-Contern",
         "mode": "train",
-        "color": "#D6001C",
+        "color": "#37474F",
         "stations": 1,
         "headway": 22.4
       },
@@ -148,7 +148,7 @@
         "name": "RE",
         "longName": "RE Hollerich - Luxembourg",
         "mode": "train",
-        "color": "#D6001C",
+        "color": "#37474F",
         "stations": 2,
         "headway": 22.5
       },
@@ -156,7 +156,7 @@
         "name": "RE",
         "longName": "RE Berchem - Dommeldange",
         "mode": "train",
-        "color": "#D6001C",
+        "color": "#37474F",
         "stations": 5,
         "headway": 29.8
       },
@@ -164,21 +164,21 @@
         "name": "TER",
         "longName": "TER Howald - Luxembourg",
         "mode": "train",
-        "color": "#1F4E9C",
+        "color": "#37474F",
         "stations": 1,
         "headway": 5.9
       },
       {
         "name": "T1",
         "mode": "tram",
-        "color": "#6CBE45",
+        "color": "#8E24AA",
         "stations": 39,
         "headway": 3.9
       },
       {
         "name": "FUN",
         "mode": "funicular",
-        "color": "#009BD4",
+        "color": "#8E24AA",
         "stations": 2,
         "headway": 4.0
       }

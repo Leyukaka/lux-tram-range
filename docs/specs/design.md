@@ -59,7 +59,7 @@ Constats sur le GTFS du 2026-09-30 :
 | Trains : 5 routes seulement, une par catégorie (IC, RE, RB, TER, TGV), en route_type 2 | Découpage en lignes par terminus (voir plus bas) |
 | Tram : route `2466`, T1, route_type 0 | Mode `tram` |
 | Pas de route_type 7 : le funiculaire Pfaffenthal-Kirchberg est absent | Tronçon déclaré à la main (`extraLinks`) |
-| `route_color` vide sur 712 des 716 routes | Couleurs dans la configuration (`routeColors`) |
+| `route_color` vide sur 712 des 716 routes | Couleurs dans la configuration (`modeColors`, `agencyColors`) |
 | `shapes.txt` présent (41 Mo) | `railGeometry: "gtfs"` pour train et tram |
 | Arrêts de 48,95 à 50,28 N et de 5,71 à 6,99 E (Metz, Trèves, Arlon) | `stopsBbox` par Carte |
 | Pas de `parent_station` (location_type 0 partout) | Regroupement par nom de l'original, inchangé |
@@ -80,7 +80,7 @@ Constats sur le GTFS du 2026-09-30 :
 | E6 | Pas de tronçon manuel | `extraLinks` dans la config de Carte | R3.9 |
 | E7 | Bus désactivés par défaut, `bus=1` dans l'URL | Bus activés par défaut, `bus=0` dans l'URL | R8.1, R9.1 |
 | E8 | Géocodeur BAN (`api-adresse.data.gouv.fr`) | Géocodeur geoportail.lu `https://map.geoportail.lu/fulltextsearch?query=&limit=` (CORS `*` vérifié) | R5.2 |
-| E9 | Couleurs de ligne lues dans le GTFS | Repli sur `routeColors` (par nom court ou par catégorie) | R6.4 |
+| E9 | Couleurs de ligne lues dans le GTFS | Couleur par mode (tram, train) puis par opérateur pour les bus (`modeColors`, `agencyColors`), avant celle du GTFS | R6.4 |
 | E10 | GitHub Pages, beacon Cloudflare Analytics | Worker en assets statiques, aucun traceur | R13 |
 | E11 | Classements, images OG | Retirés | R10.4 |
 | E12 | Seuil de vitesse unique dans check_trips (35 km/h) | Seuil par mode (tram 35, train 90) | R14.2 |
@@ -106,10 +106,11 @@ Champs ajoutés :
   "gridCellMeters": 200,             // 200 pour la ville ; 300 à 400 pour le pays, ajusté pour R4.2
   "maxWait": 30,                     // E5
   "splitTrainRoutes": true,          // E4
-  "routeColors": {                   // E9 : clé = route_short_name, ou catégorie pour les trains
-    "T1": "#6CBE45",
-    "RE": "#D6001C", "RB": "#E8505B", "IC": "#8B1E3F", "TER": "#1F4E9C", "TGV": "#5A5A5A",
-    "FUN": "#009BD4"
+  "modeColors": {                    // E9 : une couleur pour le tram, une pour les trains
+    "tram": "#8E24AA", "funicular": "#8E24AA", "train": "#37474F"
+  },
+  "agencyColors": {                  // E9 : bus en bleus, une nuance par opérateur (agency_id)
+    "6": "#0D47A1", "1": "#1E88E5", "16": "#0288D1", "171": "#5C6BC0"
   },
   "extraLinks": [                    // E6 : funiculaire Pfaffenthal-Kirchberg
     { "id": "FUN", "name": "Funiculaire", "mode": "funicular",
@@ -120,8 +121,9 @@ Champs ajoutés :
 ```
 
 Les deux noms d'arrêts du funiculaire existent dans le Feed : la gare CFL en bas, la station de tram en haut.
-Les couleurs restent à confirmer pendant l'implémentation.
-Les couleurs reprennent les codes visuels publics des opérateurs, sans logo.
+Couleurs choisies par l'owner : tram violet, trains ardoise, bus en bleus (AVL, RGTR, TICE, bus CFL). Elles
+évitent le vert et le rouge de la carte de chaleur. `routeColors` (par nom court) reste possible pour une
+exception. Le texte des badges est noir ou blanc selon le contraste WCAG.
 
 `luxembourg-ville` :
 - `communes: ["Luxembourg"]` ;

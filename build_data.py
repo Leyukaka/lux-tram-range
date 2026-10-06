@@ -918,15 +918,22 @@ def extract_network(gtfs_path: Path, city: dict):
     waits: Dict[Tuple[int, Line], float] = {key: round(timetable.boarding_wait(*key), 2) for key in boarding}
     extra_links = add_extra_links(city, complexes, routes, edges, waits)
 
-    # Most routes of the Luxembourg feed have no colour: the network config gives one by short name.
+    # Most routes of the Luxembourg feed have no colour. The network config colours by line (routeColors), then by
+    # operator (agencyColors: shades of blue for AVL, RGTR, TICE and CFL buses), then by mode (one colour for the
+    # tram, one for trains); the feed's own colour comes last.
     colors = city.get("routeColors", {})
+    agency_colors = city.get("agencyColors", {})
+    mode_colors = city.get("modeColors", {})
     served = {route_id for station in complexes for route_id in station["routes"]}
     route_info = {}
     for route_id in sorted(served):  # sorted: identical output from one build to the next
         row = routes[route_id]
         short = row.get("route_short_name", "")
         mode = mode_overrides.get(route_id) or mode_overrides.get(short, route_mode(row.get("route_type", "3")))
-        color = (row.get("route_color") or "").strip().lstrip("#") or colors.get(short, colors.get(route_id, "#888888")).lstrip("#")
+        color = (
+            colors.get(short) or colors.get(route_id) or mode_colors.get(mode)
+            or agency_colors.get(row.get("agency_id", "")) or (row.get("route_color") or "").strip() or "#888888"
+        ).lstrip("#")
         route_info[route_id] = {
             "mode": mode,
             "rail": mode in RAIL_MODES,

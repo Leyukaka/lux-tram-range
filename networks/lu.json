@@ -1,12 +1,14 @@
 {
-  "routeColors": {
-    "T1": "#6CBE45",
-    "IC": "#8B1E3F",
-    "RE": "#D6001C",
-    "RB": "#E8707A",
-    "TER": "#1F4E9C",
-    "TGV": "#5A5A5A",
-    "FUN": "#009BD4"
+  "modeColors": {
+    "tram": "#8E24AA",
+    "funicular": "#8E24AA",
+    "train": "#37474F"
+  },
+  "agencyColors": {
+    "6": "#0D47A1",
+    "1": "#1E88E5",
+    "16": "#0288D1",
+    "171": "#5C6BC0"
   },
   "extraLinks": [
     {
