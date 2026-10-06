@@ -1,0 +1,22 @@
+{
+  "routeColors": {
+    "T1": "#6CBE45",
+    "IC": "#8B1E3F",
+    "RE": "#D6001C",
+    "RB": "#E8707A",
+    "TER": "#1F4E9C",
+    "TGV": "#5A5A5A",
+    "FUN": "#009BD4"
+  },
+  "extraLinks": [
+    {
+      "id": "FUN",
+      "name": "Funiculaire",
+      "mode": "funicular",
+      "from": "Pfaffenthal-Kirchberg, Gare",
+      "to": "Kirchberg, Rout Bréck - Pafendall (Tram)",
+      "minutes": 1.0,
+      "headway": 4
+    }
+  ]
+}

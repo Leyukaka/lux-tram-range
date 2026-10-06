@@ -1,0 +1,63 @@
+{
+  "slug": "luxembourg-ville",
+  "order": 1,
+  "name": "Luxembourg-Ville",
+  "kind": "train+tram",
+  "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR)",
+  "territory": "Ville de Luxembourg",
+  "areaKey": "city",
+  "gtfsShared": "lu",
+  "gtfsResolve": "udata",
+  "gtfsDataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
+  "gtfsApi": "https://data.public.lu/api/1/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
+  "gtfsLicence": "cc-by",
+  "communesSource": "osm",
+  "communes": [
+    "Luxembourg"
+  ],
+  "defaultFrom": {
+    "lat": 49.59989,
+    "lon": 6.13364,
+    "label": "Gare Centrale"
+  },
+  "searchExample": "Place d'Armes",
+  "published": "2026-10-06",
+  "lat0": 49.6,
+  "gridCellMeters": 200,
+  "maxWait": 30,
+  "splitTrainRoutes": true,
+  "stopsBbox": [
+    49.53,
+    6.01,
+    49.68,
+    6.25
+  ],
+  "osmBbox": [
+    49.54,
+    6.02,
+    49.67,
+    6.23
+  ],
+  "parksBbox": [
+    49.56,
+    6.06,
+    49.65,
+    6.2
+  ],
+  "rivers": [
+    "Alzette",
+    "Pétrusse"
+  ],
+  "riverWaterways": [
+    "river",
+    "stream"
+  ],
+  "view": "land",
+  "checks": [
+    {
+      "station": "Kirchberg, Luxexpo",
+      "min": 18,
+      "max": 30
+    }
+  ]
+}

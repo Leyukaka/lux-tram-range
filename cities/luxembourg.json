@@ -1,0 +1,63 @@
+{
+  "slug": "luxembourg",
+  "order": 2,
+  "name": "Luxembourg",
+  "kind": "train+tram",
+  "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR, TICE)",
+  "territory": "Grand-Duché de Luxembourg",
+  "areaKey": "country",
+  "gtfsShared": "lu",
+  "gtfsResolve": "udata",
+  "gtfsDataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
+  "gtfsApi": "https://data.public.lu/api/1/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
+  "gtfsLicence": "cc-by",
+  "communesSource": "osm",
+  "communes": "all",
+  "defaultFrom": {
+    "lat": 49.59989,
+    "lon": 6.13364,
+    "label": "Gare Centrale"
+  },
+  "searchExample": "Esch-sur-Alzette",
+  "published": "2026-10-06",
+  "lat0": 49.8,
+  "gridCellMeters": 350,
+  "maxWait": 30,
+  "splitTrainRoutes": true,
+  "stopsBbox": [
+    49.4,
+    5.7,
+    50.2,
+    6.55
+  ],
+  "osmBbox": [
+    49.44,
+    5.72,
+    50.19,
+    6.54
+  ],
+  "parksBbox": [
+    49.56,
+    6.06,
+    49.65,
+    6.2
+  ],
+  "view": "land",
+  "checks": [
+    {
+      "station": "Kirchberg, Luxexpo",
+      "min": 18,
+      "max": 30
+    },
+    {
+      "station": "Ettelbruck, Gare",
+      "min": 25,
+      "max": 40
+    },
+    {
+      "station": "Esch-sur-Alzette, Gare",
+      "min": 20,
+      "max": 35
+    }
+  ]
+}
