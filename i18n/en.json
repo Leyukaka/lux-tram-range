@@ -57,7 +57,7 @@
   "layer_lieu_dit": "Named place",
   "faq": "Frequently asked questions",
   "method_q": "How are travel times calculated?",
-  "method_a": "Scheduled services on a reference weekday, 07:00 to 20:00. Walking uses straight lines at 4.5 km/h, with bridges across rivers on the city map. Waiting is half the average headway, capped at 30 min. Transfers add 1.5 min walking and waiting, plus 1 min platform access for trains and the funicular. Train categories are split into lines by terminus. The Pfaffenthal-Kirchberg funicular is added manually because it is absent from the GTFS.",
+  "method_a": "Scheduled services on a reference weekday, 07:00 to 20:00. Walking uses straight lines at 4.5 km/h, with bridges across rivers on the city map. Initial wait: the average wait of a traveller arriving at a random time, computed from the actual timetable and counting every vehicle that serves the same stops (several bus lines, or IC, RE and RB trains heading north), capped at 30 min. Transfers: 1.5 min walking plus the actual wait after arrival, which accounts for guaranteed connections, plus 1 min platform access for trains and the funicular. Train categories are split into lines by terminus. The Pfaffenthal-Kirchberg funicular is added manually because it is absent from the GTFS. Across 14 trips compared with mobiliteit.lu, the average deviation is about 3 minutes.",
   "bus_q": "Are buses included?",
   "bus_a": "Yes, by default: AVL, RGTR, TICE and CFL buses. Uncheck Bus to use only rail transport. Public transport in Luxembourg is free.",
   "sources_q": "Where does the data come from?",

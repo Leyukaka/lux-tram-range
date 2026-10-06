@@ -387,12 +387,13 @@ function buildItinerary(solution, point) {
   const name = (state) => data.stations[graph.station[state]].name;
   const steps = [{ kind: "walk", text: t("walk_to", {name: name(chain[0])}), minutes: solution.seedWalk[chain[0]] }];
   let legStart = chain[0];
+  let legWait = graph.wait[legStart];
   const closeLeg = (legEnd) => {
     steps.push({
       kind: "ride",
       route: graph.route[legStart],
       text: t("ride_leg", {from: name(legStart), to: name(legEnd)}),
-      wait: graph.wait[legStart],
+      wait: legWait,
       minutes: solution.dist[legEnd] - solution.dist[legStart],
     });
   };
@@ -401,10 +402,15 @@ function buildItinerary(solution, point) {
     const to = chain[i];
     if (graph.route[from] === graph.route[to] && graph.station[from] !== graph.station[to]) continue;
     closeLeg(from);
+    let walk = 0;
     if (graph.station[from] !== graph.station[to]) {
       const meters = walkMeters(data.stations[graph.station[from]].point, data.stations[graph.station[to]].point);
-      steps.push({ kind: "walk", text: t("transfer_to", {name: name(to)}), minutes: walkMinutes(meters) });
+      walk = walkMinutes(meters);
+      steps.push({ kind: "walk", text: t("transfer_to", {name: name(to)}), minutes: walk });
     }
+    // Attente de cette correspondance précise (horaire réel), et non l'attente moyenne d'un départ à pied.
+    const access = (graph.access[from] + graph.access[to]) / 2;
+    legWait = Math.max(0, solution.dist[to] - solution.dist[from] - walk - (data.meta.transferWalk ?? 1.5) - access);
     legStart = to;
   }
   closeLeg(chain[chain.length - 1]);
