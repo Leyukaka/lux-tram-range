@@ -7,6 +7,7 @@ Usage: python3 build_data.py <city>   (reads data/<city>/, writes site/data/<cit
 from __future__ import annotations
 
 import csv
+import bisect
 import heapq
 import io
 import json
@@ -36,13 +37,15 @@ CELL_NEAREST_RAIL_STATIONS = 3
 CELL_CANDIDATES = 4
 ORIGIN_NEAREST_STATIONS = 8  # stations reachable on foot from a departure point (also read by site/app.js)
 DEFAULT_BOARD_WAIT = 5.0
+# Wait of an alight state (see build_graph): high enough that a trip never starts there.
+ALIGHT_WAIT = 99.0
 TRANSFER_WALK = 1.5
 INTER_COMPLEX_WALK_RADIUS = 450.0
 STOP_GROUP_RADIUS = 350.0
 MIN_RIDE_MINUTES = 0.4
 MIN_WAIT = 1.0
 MAX_WAIT = 15.0  # overridden by the map config ("maxWait")
-# Daytime window used to measure headways and ride times (weekday, 7h–20h).
+# Daytime window used to measure headways and ride times (weekday, 7h-20h).
 SERVICE_WINDOW = (7 * 3600, 20 * 3600)
 MIN_RING_DISTANCE = 45.0
 MIN_LINE_DISTANCE = 25.0
@@ -68,8 +71,10 @@ OG_TRIP_MINUTES = 20
 REFERENCE_HORIZON_DAYS = 60
 # A train branch (category + terminus pair) needs this many daytime trips to stand as its own line.
 TRAIN_BRANCH_MIN_TRIPS = 4
-# Trains sharing a branch's next stations are boarded alike: the wait counts them all (see shared_train_waits).
+# Trains sharing a branch's next stations are boarded alike: the wait counts them all (see Timetable).
 TRAIN_SHARED_STOPS = 3
+# Same for buses and trams: lines sharing their next two stops form one service for the traveller (see Timetable).
+SHARED_STOPS = 2
 
 
 def route_mode(route_type: str) -> str:
@@ -389,12 +394,12 @@ def extract_arrondissements(data_dir: Path, city: dict) -> List[dict]:
     return arrondissements
 
 
-def osm_communes(data_dir: Path) -> List[Tuple[str, MultiPolygon]]:
+def osm_communes(data_dir: Path, tolerance: float = MIN_RING_DISTANCE) -> List[Tuple[str, MultiPolygon]]:
     """Communes from OSM administrative relations (Luxembourg), simplified like the geo.api.gouv.fr contours."""
     communes = []
     for element in load_json(data_dir / "osm_communes.json")["elements"]:
         name = element.get("tags", {}).get("name")
-        polygons = [[simplify_ring(ring, MIN_RING_DISTANCE) for ring in polygon] for polygon in osm_polygons(element)]
+        polygons = [[simplify_ring(ring, tolerance) for ring in polygon] for polygon in osm_polygons(element)]
         if name and polygons:
             communes.append((name, polygons))
     return communes
@@ -402,7 +407,7 @@ def osm_communes(data_dir: Path) -> List[Tuple[str, MultiPolygon]]:
 
 def extract_communes(data_dir: Path, city: dict, stations: Sequence[dict]) -> Tuple[List[dict], MultiPolygon]:
     if city.get("communesSource") == "osm":
-        features = osm_communes(data_dir)
+        features = osm_communes(data_dir, city.get("ringSimplifyMeters", MIN_RING_DISTANCE))
         wanted = set() if city.get("communes") == "all" else set(city.get("communes", []))
     else:
         payload = load_json(data_dir / "communes.geojson")
@@ -575,7 +580,7 @@ def pick_reference_date(services: Dict[date, frozenset], trips_per_service: Coun
     upcoming = soon if len(soon) >= 4 else upcoming
     volume = {day: sum(trips_per_service[service] for service in services[day]) for day in upcoming}
     busiest = max(volume.values())
-    # School holidays typically run 10–20 % fewer trips: only near-busiest days are plain term days.
+    # School holidays typically run 10-20 % fewer trips: only near-busiest days are plain term days.
     candidates = [day for day in upcoming if volume[day] >= 0.92 * busiest]
     signatures = Counter(services[day] for day in candidates)
     typical = signatures.most_common(1)[0][0]
@@ -725,36 +730,83 @@ def effective_routes(stop_times, trips, routes, complexes, complex_of, city) -> 
     return trip_route
 
 
-def shared_train_waits(stop_times, trips, trip_route, routes, complex_of, window_minutes) -> Dict[Tuple[int, str], float]:
-    """Wait for a train branch at a station, counting every train that serves its next stations.
+Line = Tuple[str, str]  # (route_id, direction_id): one graph state per station, line and direction
 
-    Once trains are split by terminus, a traveller from Luxembourg to Ettelbruck still boards the first IC, RE or RB
-    heading there, not only the trains of one branch. For each daytime departure of a branch, the trains that leave
-    the same station and also stop at its next TRAIN_SHARED_STOPS stations are counted; the headway is the window
-    divided by that count (averaged over the trips, then over the two directions, as for the other lines)."""
-    window_start, window_end = SERVICE_WINDOW
-    is_train = {trip_id for trip_id in stop_times if route_mode(routes[trips[trip_id]["route_id"]].get("route_type", "3")) == "train"}
-    # Only trains with the same next stops count: an express (TGV, RE) and a stopping train (RB, TER) leaving the same
-    # station are not interchangeable, the ride edges of the express would otherwise get the stopping trains' frequency.
-    nexts: Dict[int, Counter] = defaultdict(Counter)  # station → next stops of each daytime departure
-    plans = []
-    for trip_id in is_train:
-        stations = [complex_of[stop_id] for _, stop_id, _, _ in stop_times[trip_id]]
-        for i, (_, _, _, dep) in enumerate(stop_times[trip_id][:-1]):
-            if window_start <= dep < window_end:
-                following = tuple(stations[i + 1:i + 1 + TRAIN_SHARED_STOPS])
-                nexts[stations[i]][following] += 1
-                plans.append((stations[i], trip_route[trip_id], trips[trip_id].get("direction_id") or "0", following))
-    counts: Dict[Tuple[int, str], Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
-    for station, route_id, direction, following in plans:
-        # A shorter tail (near a terminus) also matches the longer trains that start with it.
-        shared = sum(count for other, count in nexts[station].items() if other[:len(following)] == following)
-        counts[(station, route_id)][direction].append(shared)
-    waits = {}
-    for key, per_direction in counts.items():
-        mean_departures = statistics.mean(statistics.mean(values) for values in per_direction.values())
-        waits[key] = round(min(MAX_WAIT, max(MIN_WAIT, window_minutes / mean_departures / 2.0)), 2)
-    return waits
+
+class Timetable:
+    """Daytime departures and arrivals of every line at every station, to derive waits from the actual timetable
+    rather than from a mean headway.
+
+    Common lines: a traveller boards the first vehicle that goes where the line goes, whatever its number (see pooled).
+
+    Transfers: the wait after an arrival is the time to the next pooled departure, averaged over the day's arrivals.
+    Timed connections (trains splitting at Kautenbach, buses waiting at Echternach) get their real, short wait;
+    uncoordinated ones get about half the headway, as in the original model."""
+
+    def __init__(self, stop_times, trips, trip_line, routes, complex_of):
+        # station → (departure, stations served afterwards, line)
+        self.events: Dict[int, List[Tuple[int, frozenset, Line]]] = defaultdict(list)
+        self.rests: Dict[Tuple[int, Line], Counter] = defaultdict(Counter)
+        self.arrivals: Dict[Tuple[int, Line], List[int]] = defaultdict(list)
+        for trip_id, sequence in stop_times.items():
+            line = trip_line[trip_id]
+            stations = [complex_of[stop_id] for _, stop_id, _, _ in sequence]
+            for i, (_, _, arr, dep) in enumerate(sequence):
+                if i:
+                    self.arrivals[(stations[i], line)].append(arr)
+                if i < len(sequence) - 1:
+                    rest = frozenset(stations[i + 1:])
+                    self.events[stations[i]].append((dep, rest, line))
+                    self.rests[(stations[i], line)][rest] += 1
+        for times in self.arrivals.values():
+            times.sort()
+        self.pool_cache: Dict[Tuple[int, Line], List[int]] = {}
+
+    def pooled(self, station: int, line: Line) -> List[int]:
+        """Departures usable instead of this line's: its own, and any vehicle serving every stop its usual departure
+        (its most common run) serves afterwards. A train to Diekirch does not stand in for one to Troisvierges, even
+        if they share their first stops; several buses running the same stops do."""
+        key = (station, line)
+        if key not in self.pool_cache:
+            runs = self.rests.get(key)
+            usual = runs.most_common(1)[0][0] if runs else None
+            self.pool_cache[key] = sorted(
+                dep for dep, rest, other in self.events[station] if other == line or (usual and rest >= usual)
+            )
+        return self.pool_cache[key]
+
+    def boarding_wait(self, station: int, line: Line) -> float:
+        """Mean wait of a traveller showing up at a uniformly random time of the window."""
+        departures = self.pooled(station, line)
+        start, end = SERVICE_WINDOW
+        total, previous = 0.0, start
+        for dep in departures:
+            if dep <= start:
+                continue
+            gap = min(dep, end) - previous
+            total += gap * gap / 2.0
+            previous = dep
+            if dep >= end:
+                break
+        if previous < end:  # no departure until the end of the window: count the cap for the remainder
+            total += (end - previous) * MAX_WAIT * 60
+        return min(MAX_WAIT, max(MIN_WAIT, total / (end - start) / 60.0))
+
+    def transfer_wait(self, arrival_station: int, arriving: Line, station: int, line: Line, walk: float) -> float | None:
+        """Mean wait for `line` at `station` after arriving with `arriving`, `walk` minutes away. None if unknown."""
+        departures = self.pooled(station, line)
+        start, end = SERVICE_WINDOW
+        waits = []
+        for arr in self.arrivals.get((arrival_station, arriving), ()):
+            if not start <= arr < end:
+                continue
+            ready = arr + walk * 60
+            k = bisect.bisect_left(departures, ready)
+            if k < len(departures):
+                waits.append(min(MAX_WAIT * 60, departures[k] - ready))
+        if not waits:
+            return None
+        return min(MAX_WAIT, max(0.0, statistics.mean(waits) / 60.0))
 
 
 def add_extra_links(city: dict, complexes: List[dict], routes: Dict[str, dict], edges: dict, waits: dict) -> List[Tuple[str, int, int]]:
@@ -775,10 +827,13 @@ def add_extra_links(city: dict, complexes: List[dict], routes: Dict[str, dict], 
         routes[route_id] = {"route_id": route_id, "route_short_name": link.get("short", route_id),
                             "route_long_name": "", "route_type": "7", "route_color": ""}
         wait = round(min(MAX_WAIT, max(MIN_WAIT, link["headway"] / 2.0)), 2)
-        for src, dst in ((a, b), (b, a)):
-            complexes[src]["routes"].add(route_id)
-            edges[(src, dst, route_id)] = max(MIN_RIDE_MINUTES, float(link["minutes"]))
-            waits[(src, route_id)] = wait
+        for (src, dst), direction in (((a, b), "0"), ((b, a), "1")):
+            line = (route_id, direction)
+            for station in (src, dst):
+                complexes[station]["routes"].add(route_id)
+                complexes[station]["lines"].add(line)
+            edges[(src, dst, line)] = max(MIN_RIDE_MINUTES, float(link["minutes"]))
+            waits[(src, line)] = wait
         added.append((route_id, a, b))
     return added
 
@@ -830,32 +885,37 @@ def extract_network(gtfs_path: Path, city: dict):
     used_stop_ids = {stop_id for sequence in stop_times.values() for _, stop_id, _, _ in sequence}
     complexes, complex_of = group_stops(stops, used_stop_ids)
 
-    ride_samples: Dict[Tuple[int, int, str], List[float]] = defaultdict(list)
-    departures: Dict[Tuple[int, str], Counter] = defaultdict(Counter)
+    ride_samples: Dict[Tuple[int, int, Line], List[float]] = defaultdict(list)
     window_start, window_end = SERVICE_WINDOW
     trip_route = effective_routes(stop_times, trips, routes, complexes, complex_of, city)
+    for station in complexes:
+        station["lines"] = set()
+    trip_line: Dict[str, Line] = {}
     for trip_id, sequence in stop_times.items():
         trip = trips[trip_id]
         route_id = trip_route[trip_id]
         sequence.sort()
+        if route_mode(routes[trip["route_id"]].get("route_type", "3")) == "train":
+            # direction_id of a train category means "towards Luxembourg": it flips for trains running through the
+            # city. A train line is oriented by its terminus names instead.
+            first, last = complexes[complex_of[sequence[0][1]]]["name"], complexes[complex_of[sequence[-1][1]]]["name"]
+            line = (route_id, "0" if first <= last else "1")
+        else:
+            line = (route_id, trip.get("direction_id") or "0")
+        trip_line[trip_id] = line
         for (_, stop_a, _, dep_a), (_, stop_b, arr_b, _) in zip(sequence, sequence[1:]):
             a, b = complex_of[stop_a], complex_of[stop_b]
-            complexes[a]["routes"].add(route_id)
-            complexes[b]["routes"].add(route_id)
+            for station in (a, b):
+                complexes[station]["routes"].add(route_id)
+                complexes[station]["lines"].add(line)
             if a == b or not window_start <= dep_a < window_end:
                 continue
-            ride_samples[(a, b, route_id)].append(max(0, arr_b - dep_a) / 60.0)
-            departures[(a, route_id)][trip.get("direction_id") or "0"] += 1
+            ride_samples[(a, b, line)].append(max(0, arr_b - dep_a) / 60.0)
 
     edges = {key: max(MIN_RIDE_MINUTES, statistics.median(samples)) for key, samples in ride_samples.items()}
-    window_minutes = (window_end - window_start) / 60.0
-    waits: Dict[Tuple[int, str], float] = {}
-    for key, per_direction in departures.items():
-        mean_departures = sum(per_direction.values()) / len(per_direction)
-        headway = window_minutes / mean_departures
-        waits[key] = round(min(MAX_WAIT, max(MIN_WAIT, headway / 2.0)), 2)
-    if city.get("splitTrainRoutes"):
-        waits.update(shared_train_waits(stop_times, trips, trip_route, routes, complex_of, window_minutes))
+    timetable = Timetable(stop_times, trips, trip_line, routes, complex_of)
+    boarding = {a_line for a, b, line in edges for a_line in [(a, line)]}
+    waits: Dict[Tuple[int, Line], float] = {key: round(timetable.boarding_wait(*key), 2) for key in boarding}
     extra_links = add_extra_links(city, complexes, routes, edges, waits)
 
     # Most routes of the Luxembourg feed have no colour: the network config gives one by short name.
@@ -879,46 +939,78 @@ def extract_network(gtfs_path: Path, city: dict):
         for trip_id, trip in trips.items()
         if trip_id in trip_route and trip.get("shape_id") and route_info.get(trip_route[trip_id], {}).get("rail")
     }
-    return reference_date, complexes, edges, waits, route_info, shape_routes, extra_links
+    return reference_date, complexes, edges, waits, route_info, shape_routes, extra_links, timetable
 
 
-def build_graph(complexes: Sequence[dict], edges, waits, route_info: Dict[str, dict], access_minutes: Dict[str, float], rivers: Rivers):
+def build_graph(complexes: Sequence[dict], edges, waits, route_info: Dict[str, dict], access_minutes: Dict[str, float],
+                rivers: Rivers, timetable: Timetable):
+    """Two states per station, line and direction.
+
+    - "board": entered from the street (walk + access + boarding wait, by the browser) or from a transfer; rides on.
+    - "alight": reached only by riding; the only place transfers start from. Its wait is ALIGHT_WAIT so that the
+      browser never seeds a trip there.
+    Transfers carry the wait after this very arrival, from the timetable (see Timetable): a traveller walking in from
+    the street cannot use the timed connection of a vehicle he never rode."""
     route_states: List[dict] = []
     station_states: List[List[int]] = [[] for _ in complexes]
-    lookup: Dict[Tuple[int, str], int] = {}
+    board: Dict[Tuple[int, Line], int] = {}
+    alight: Dict[Tuple[int, Line], int] = {}
+    lines_of: List[Line] = []
+    leaving = {(a, line) for a, b, line in edges}
+    arriving = {(b, line) for a, b, line in edges}
+
+    def add_state(station_index: int, line: Line, wait: float) -> int:
+        state_index = len(route_states)
+        route_states.append(
+            {
+                "stationIndex": station_index,
+                "routeId": line[0],
+                "wait": wait,
+                "access": access_minutes.get(route_info[line[0]]["mode"], 0.0),
+            }
+        )
+        station_states[station_index].append(state_index)
+        lines_of.append(line)
+        return state_index
+
     for station_index, station in enumerate(complexes):
-        for route_id in sorted(station["routes"]):
-            state_index = len(route_states)
-            route_states.append(
-                {
-                    "stationIndex": station_index,
-                    "routeId": route_id,
-                    "wait": waits.get((station_index, route_id), DEFAULT_BOARD_WAIT),
-                    "access": access_minutes.get(route_info[route_id]["mode"], 0.0),
-                }
-            )
-            station_states[station_index].append(state_index)
-            lookup[(station_index, route_id)] = state_index
+        for line in sorted(station["lines"]):
+            if (station_index, line) in leaving:
+                board[(station_index, line)] = add_state(station_index, line, waits.get((station_index, line), DEFAULT_BOARD_WAIT))
+            if (station_index, line) in arriving:
+                alight[(station_index, line)] = add_state(station_index, line, ALIGHT_WAIT)
 
     adjacency: List[List[List[float]]] = [[] for _ in route_states]
 
     def add_edge(src: int, dst: int, weight: float) -> None:
-        adjacency[src].append([dst, round(weight, 2)])
+        adjacency[src].append([dst, round(weight, 1)])
 
-    # Ride edges are directed: one-way loops and branches stay correct.
-    for (a, b, route_id), minutes in edges.items():
-        add_edge(lookup[(a, route_id)], lookup[(b, route_id)], minutes)
+    # Ride edges are directed: one-way loops and branches stay correct. Each ride reaches both the next board state
+    # (staying aboard) and the alight state (getting off, to leave or to change).
+    for (a, b, line), minutes in edges.items():
+        if (b, line) in board:
+            add_edge(board[(a, line)], board[(b, line)], minutes)
+        add_edge(board[(a, line)], alight[(b, line)], minutes)
 
     def transfer(src: int, dst: int, walk: float) -> float:
-        # Leaving one platform and reaching the other: half of each access time, plus the wait.
+        # Leaving one platform and reaching the other: half of each access time, plus the wait after this arrival.
         access = (route_states[src]["access"] + route_states[dst]["access"]) / 2.0
-        return walk + access + route_states[dst]["wait"]
+        wait = timetable.transfer_wait(route_states[src]["stationIndex"], lines_of[src],
+                                       route_states[dst]["stationIndex"], lines_of[dst], walk + access)
+        return walk + access + (route_states[dst]["wait"] if wait is None else wait)
 
-    # Changing line inside a stop: short walk plus waiting for the next vehicle.
-    for states in station_states:
-        for src in states:
-            for dst in states:
-                if src != dst:
+    alights_at: List[List[int]] = [[] for _ in complexes]
+    boards_at: List[List[int]] = [[] for _ in complexes]
+    for (station_index, _), state in alight.items():
+        alights_at[station_index].append(state)
+    for (station_index, _), state in board.items():
+        boards_at[station_index].append(state)
+
+    # Changing line inside a stop: short walk plus waiting for the next vehicle (never back onto the same route).
+    for station_index in range(len(complexes)):
+        for src in alights_at[station_index]:
+            for dst in boards_at[station_index]:
+                if route_states[src]["routeId"] != route_states[dst]["routeId"]:
                     add_edge(src, dst, transfer(src, dst, TRANSFER_WALK))
 
     # Walking to a nearby stop with another name.
@@ -930,9 +1022,15 @@ def build_graph(complexes: Sequence[dict], edges, waits, route_info: Dict[str, d
             if i == j or meters > INTER_COMPLEX_WALK_RADIUS:
                 continue
             walk = meters / WALK_METERS_PER_MINUTE + TRANSFER_WALK
-            for src in station_states[i]:
-                for dst in station_states[j]:
-                    if route_states[src]["routeId"] != route_states[dst]["routeId"]:
+            here = {lines_of[state] for state in boards_at[i]}
+            there = {lines_of[state] for state in station_states[j]}
+            for src in alights_at[i]:
+                # The line we came with also stops there: staying aboard (or changing there) beats walking.
+                if lines_of[src] in there:
+                    continue
+                for dst in boards_at[j]:
+                    # Walking to a nearby stop to board a line that already stops here is never better.
+                    if lines_of[dst] not in here and route_states[src]["routeId"] != route_states[dst]["routeId"]:
                         add_edge(src, dst, transfer(src, dst, walk))
     return route_states, station_states, adjacency
 
@@ -1041,7 +1139,8 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
         if not info["rail"]:
             continue
         waits = sorted(route_states[i]["wait"] for i in rail_states
-                       if route_states[i]["routeId"] == route_id and route_states[i]["stationIndex"] in inside)
+                       if route_states[i]["routeId"] == route_id and route_states[i]["stationIndex"] in inside
+                       and route_states[i]["wait"] < ALIGHT_WAIT)
         if not waits:
             continue  # line running only outside the map (beyond the border, or outside the city)
         lines.append(
@@ -1126,7 +1225,7 @@ def write_provenance(city: dict, data_dir: Path, gtfs_dir: Path, reference_date:
         "city": city["name"],
         "builtAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "referenceDate": reference_date.isoformat(),
-        "serviceWindow": f"{window_start // 3600}h–{window_end // 3600}h",
+        "serviceWindow": f"{window_start // 3600}h-{window_end // 3600}h",
         "gtfs": {
             "network": city["network"],
             "dataset": city["gtfsDataset"],
@@ -1167,7 +1266,7 @@ def main() -> None:
     gtfs_dir = ROOT / "data" / city["gtfsDir"]
     output_path = ROOT / "site" / "data" / f"{city['slug']}.json"
 
-    reference_date, complexes, edges, waits, route_info, shape_routes, extra_links = extract_network(gtfs_dir / "gtfs.zip", city)
+    reference_date, complexes, edges, waits, route_info, shape_routes, extra_links, timetable = extract_network(gtfs_dir / "gtfs.zip", city)
     for station in complexes:
         station["rail"] = any(route_info[route_id]["rail"] for route_id in station["routes"])
     communes, land = extract_communes(data_dir, city, complexes)
@@ -1183,7 +1282,7 @@ def main() -> None:
     access_minutes = {**MODE_ACCESS_MINUTES, **city.get("modeAccess", {})}
     river_lines, bridges = extract_rivers(data_dir, city)
     rivers = Rivers(river_lines, bridges)
-    route_states, station_states, adjacency = build_graph(complexes, edges, waits, route_info, access_minutes, rivers)
+    route_states, station_states, adjacency = build_graph(complexes, edges, waits, route_info, access_minutes, rivers, timetable)
     if city.get("railGeometry") == "osm":
         routes = rail_routes_from_osm(data_dir, city, route_info)
     else:
@@ -1238,6 +1337,7 @@ def main() -> None:
             "gridRows": rows,
             "walkMetersPerMinute": WALK_METERS_PER_MINUTE,
             "originStationCount": ORIGIN_NEAREST_STATIONS,
+            "transferWalk": TRANSFER_WALK,
             "sea": bool(context),
         },
         "context": [serialize_polygon(polygon) for polygon in context],

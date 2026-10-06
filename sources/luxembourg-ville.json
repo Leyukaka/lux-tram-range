@@ -1,8 +1,8 @@
 {
   "city": "Luxembourg-Ville",
-  "builtAt": "2026-10-06T14:37:08+00:00",
+  "builtAt": "2026-10-06T15:31:14+00:00",
   "referenceDate": "2026-11-10",
-  "serviceWindow": "7h–20h",
+  "serviceWindow": "7h-20h",
   "gtfs": {
     "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR)",
     "dataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
@@ -78,7 +78,7 @@
         "mode": "train",
         "color": "#8B1E3F",
         "stations": 2,
-        "headway": 12.8
+        "headway": 14.0
       },
       {
         "name": "RB",
@@ -86,31 +86,31 @@
         "mode": "train",
         "color": "#E8707A",
         "stations": 1,
-        "headway": 28.9
+        "headway": 29.1
       },
       {
         "name": "RB",
         "longName": "RB Luxembourg - Sandweiler-Contern",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 2,
-        "headway": 28.9
+        "stations": 3,
+        "headway": 29.2
       },
       {
         "name": "RB",
         "longName": "RB Heisdorf - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 3,
-        "headway": 20.0
+        "stations": 5,
+        "headway": 29.6
       },
       {
         "name": "RB",
         "longName": "RB Leudelange - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 2,
-        "headway": 27.0
+        "stations": 3,
+        "headway": 29.5
       },
       {
         "name": "RB",
@@ -118,7 +118,7 @@
         "mode": "train",
         "color": "#E8707A",
         "stations": 1,
-        "headway": 30.0
+        "headway": 29.8
       },
       {
         "name": "RE",
@@ -126,15 +126,15 @@
         "mode": "train",
         "color": "#D6001C",
         "stations": 1,
-        "headway": 11.1
+        "headway": 5.9
       },
       {
         "name": "RE",
         "longName": "RE Howald - Walferdange",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 3,
-        "headway": 24.4
+        "stations": 6,
+        "headway": 23.6
       },
       {
         "name": "RE",
@@ -142,7 +142,7 @@
         "mode": "train",
         "color": "#D6001C",
         "stations": 1,
-        "headway": 60.0
+        "headway": 22.4
       },
       {
         "name": "RE",
@@ -150,15 +150,15 @@
         "mode": "train",
         "color": "#D6001C",
         "stations": 2,
-        "headway": 20.0
+        "headway": 22.5
       },
       {
         "name": "RE",
         "longName": "RE Berchem - Dommeldange",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 3,
-        "headway": 23.8
+        "stations": 5,
+        "headway": 29.8
       },
       {
         "name": "TER",
@@ -166,13 +166,13 @@
         "mode": "train",
         "color": "#1F4E9C",
         "stations": 1,
-        "headway": 11.1
+        "headway": 5.9
       },
       {
         "name": "T1",
         "mode": "tram",
         "color": "#6CBE45",
-        "stations": 20,
+        "stations": 39,
         "headway": 3.9
       },
       {
@@ -186,14 +186,14 @@
     "railStations": 24,
     "busLines": 276,
     "center": "Gare Centrale",
-    "within15": 58,
+    "within15": 54,
     "within30": 100,
     "farthestStation": "Kirchberg, Luxexpo",
     "farthestMinutes": 26,
     "ogTrip": {
-      "name": "Kirchberg, Coque",
-      "lat": 49.62278,
-      "lon": 6.15428
+      "name": "Cents-Hamm, Gare",
+      "lat": 49.61502,
+      "lon": 6.16598
     }
   }
 }

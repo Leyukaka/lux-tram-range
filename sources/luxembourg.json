@@ -1,8 +1,8 @@
 {
   "city": "Luxembourg",
-  "builtAt": "2026-10-06T14:37:47+00:00",
+  "builtAt": "2026-10-06T15:32:01+00:00",
   "referenceDate": "2026-11-10",
-  "serviceWindow": "7h–20h",
+  "serviceWindow": "7h-20h",
   "gtfs": {
     "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR, TICE)",
     "dataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
@@ -77,80 +77,80 @@
         "longName": "IC Arlon - Luxembourg",
         "mode": "train",
         "color": "#8B1E3F",
-        "stations": 7,
-        "headway": 27.9
+        "stations": 11,
+        "headway": 28.6
       },
       {
         "name": "IC",
         "longName": "IC Gouvy - Luxembourg",
         "mode": "train",
         "color": "#8B1E3F",
-        "stations": 11,
-        "headway": 60.0
+        "stations": 21,
+        "headway": 58.2
       },
       {
         "name": "RB",
         "longName": "RB Diekirch - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 13,
-        "headway": 30.0
+        "stations": 24,
+        "headway": 29.6
       },
       {
         "name": "RB",
         "longName": "RB Luxembourg - Wasserbillig",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 11,
-        "headway": 28.9
+        "stations": 20,
+        "headway": 29.2
       },
       {
         "name": "RB",
         "longName": "RB Luxembourg - Pétange",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 17,
-        "headway": 30.0
+        "stations": 28,
+        "headway": 29.5
       },
       {
         "name": "RB",
         "longName": "RB Luxembourg - Wasserbillig-Frontière",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 11,
-        "headway": 28.9
+        "stations": 21,
+        "headway": 41.0
       },
       {
         "name": "RB",
         "longName": "RB Bettembourg - Volmerange-les-Mines",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 5,
-        "headway": 30.6
+        "stations": 9,
+        "headway": 30.3
       },
       {
         "name": "RB",
         "longName": "RB Noertzange - Rumelange",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 4,
-        "headway": 41.1
+        "stations": 6,
+        "headway": 45.8
       },
       {
         "name": "RB",
         "longName": "RB Arlon - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 7,
-        "headway": 28.9
+        "stations": 13,
+        "headway": 29.0
       },
       {
         "name": "RB",
         "longName": "RB Athus - Luxembourg",
         "mode": "train",
         "color": "#E8707A",
-        "stations": 9,
-        "headway": 30.0
+        "stations": 17,
+        "headway": 29.5
       },
       {
         "name": "RB",
@@ -158,54 +158,54 @@
         "mode": "train",
         "color": "#E8707A",
         "stations": 1,
-        "headway": 30.0
+        "headway": 29.7
       },
       {
         "name": "RE",
         "longName": "RE Kautenbach - Wiltz",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 4,
-        "headway": 60.0
+        "stations": 6,
+        "headway": 57.9
       },
       {
         "name": "RE",
         "longName": "RE Mersch - Pétange",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 18,
-        "headway": 30.0
+        "stations": 34,
+        "headway": 31.5
       },
       {
         "name": "RE",
         "longName": "RE Luxembourg - Rodange",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 18,
-        "headway": 30.0
+        "stations": 30,
+        "headway": 22.7
       },
       {
         "name": "RE",
         "longName": "RE Luxembourg - Wasserbillig-Frontière",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 3,
-        "headway": 60.0
+        "stations": 5,
+        "headway": 30.1
       },
       {
         "name": "RE",
         "longName": "RE Rodange - Troisvierges",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 23,
-        "headway": 30.0
+        "stations": 42,
+        "headway": 58.3
       },
       {
         "name": "RE",
         "longName": "RE Longwy - Luxembourg",
         "mode": "train",
         "color": "#D6001C",
-        "stations": 7,
+        "stations": 13,
         "headway": 60.0
       },
       {
@@ -213,16 +213,16 @@
         "longName": "TER Hettange-Grande, Gare SNCF - Luxembourg",
         "mode": "train",
         "color": "#1F4E9C",
-        "stations": 4,
-        "headway": 32.1
+        "stations": 7,
+        "headway": 60.0
       },
       {
         "name": "TER",
         "longName": "TER Bettembourg-frontière - Luxembourg",
         "mode": "train",
         "color": "#1F4E9C",
-        "stations": 4,
-        "headway": 29.4
+        "stations": 6,
+        "headway": 36.2
       },
       {
         "name": "TGV",
@@ -230,13 +230,13 @@
         "mode": "train",
         "color": "#5A5A5A",
         "stations": 2,
-        "headway": 60.0
+        "headway": 24.3
       },
       {
         "name": "T1",
         "mode": "tram",
         "color": "#6CBE45",
-        "stations": 24,
+        "stations": 46,
         "headway": 3.9
       },
       {
@@ -250,14 +250,14 @@
     "railStations": 92,
     "busLines": 679,
     "center": "Gare Centrale",
-    "within15": 15,
-    "within30": 48,
-    "farthestStation": "Wiltz, Gare",
-    "farthestMinutes": 96,
+    "within15": 16,
+    "within30": 49,
+    "farthestStation": "Troisvierges-Frontière",
+    "farthestMinutes": 81,
     "ogTrip": {
-      "name": "Kirchberg, Coque",
-      "lat": 49.62278,
-      "lon": 6.15428
+      "name": "Cents-Hamm, Gare",
+      "lat": 49.61502,
+      "lon": 6.16598
     }
   }
 }

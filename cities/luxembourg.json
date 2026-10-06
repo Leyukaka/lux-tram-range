@@ -51,13 +51,13 @@
     },
     {
       "station": "Ettelbruck, Gare",
-      "min": 25,
-      "max": 40
+      "min": 30,
+      "max": 45
     },
     {
       "station": "Esch-sur-Alzette, Gare",
-      "min": 20,
-      "max": 35
+      "min": 25,
+      "max": 40
     }
   ],
   "rivers": [
@@ -69,5 +69,6 @@
     "river"
   ],
   "defaultMax": 90,
-  "scaleMax": 150
+  "scaleMax": 150,
+  "ringSimplifyMeters": 100
 }
