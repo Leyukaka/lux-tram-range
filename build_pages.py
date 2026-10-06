@@ -10,7 +10,7 @@ from cities import load_cities
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
 SITE_NAME = 'lux-tram-range'
-SITE_URL = os.environ.get('SITE_URL', 'https://tram.kwikviz.com').rstrip('/')
+SITE_URL = os.environ.get('SITE_URL', 'https://tram.monbot.si').rstrip('/')
 GITHUB_URL = 'https://github.com/Leyukaka/lux-tram-range'
 # Author links shown in the footer and the legal page (an empty link is left out).
 AUTHOR = {'name': 'Leyukaka', 'GitHub': 'https://github.com/Leyukaka', 'LinkedIn': ''}

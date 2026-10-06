@@ -2,7 +2,7 @@
 
 Carte des temps de trajet en train, tram, funiculaire et bus pour tout le Luxembourg, ouverte sur Luxembourg-Ville. Les bus sont inclus par défaut. Calcul dans le navigateur, sans cookies ni mesure d'audience.
 
-Site : https://tram.kwikviz.com
+Site : https://tram.monbot.si
 
 ## Construire, tester et publier
 
