@@ -1303,3 +1303,12 @@ output {
     display: none;
   }
 }
+
+/* Shared page navigation and map links. */
+.site-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 4%; }
+.site-header nav { display:flex; gap:.8rem; }
+.site-footer { max-width:1120px; margin:2rem auto; padding:1rem 24px; color:var(--muted, #555); font-size:.9rem; }
+.city-panel-list .city-item { padding:1rem; }
+.city-card { padding:1.5rem; }
+.trip-steps .badge.walk { font-size:.7rem; min-width:3.5rem; }
+@media (max-width:720px) { .site-header { padding:1rem; } .site-header nav a { padding:.5rem; } }

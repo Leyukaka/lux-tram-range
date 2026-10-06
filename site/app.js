@@ -1,22 +1,18 @@
 // Carte des temps de trajet en transports en commun (tram.camilleroux.com).
 // La ville affichée est décrite par le bloc JSON #city-config de la page.
-// Carte des temps de trajet en tram (et bus) sur le réseau TaM.
+// Luxembourg transport travel times.
 
+const I18N = JSON.parse(document.getElementById("i18n").textContent);
+function t(key, vars = {}) {
+  const text = I18N.messages[key] ?? I18N.fallback[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? `{${name}}`));
+}
 const CITY = JSON.parse(document.getElementById("city-config").textContent);
 const DATA_URL = new URL(`./data/${CITY.slug}.json?v=${CITY.dataVersion}`, import.meta.url);
-const GEOCODER_URL = "https://api-adresse.data.gouv.fr/search/";
+const GEOCODER_URL = "https://map.geoportail.lu/fulltextsearch";
 
 const DEFAULT_FROM = CITY.defaultFrom;
-const MODE_LABELS = {
-  tram: "Tram",
-  metro: "Métro",
-  rer: "RER",
-  funicular: "Funiculaire",
-  cable: "Téléphérique",
-  ferry: "Bateau",
-  busway: "Busway",
-  bus: "Bus",
-};
+const MODE_LABELS = Object.fromEntries(["train", "tram", "metro", "rer", "funicular", "cable", "ferry", "busway", "bus"].map(mode => [mode, t(`mode_${mode}`)]));
 const DEFAULT_MAX = 45;
 const ISOCHRONE_OPTIONS = [15, 30, 45, 60];
 const DEFAULT_ISOCHRONES = [15, 30];
@@ -70,7 +66,7 @@ const app = {
   size: { width: 0, height: 0, dpr: 1 },
   from: null, // { point, label }
   to: null, // { point, label }
-  includeBus: false,
+  includeBus: true,
   maxMinutes: DEFAULT_MAX,
   isochrones: [...DEFAULT_ISOCHRONES],
   heatFrom: "from", // la heatmap part du départ ou de l'arrivée
@@ -89,12 +85,12 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const hypot = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 function formatMinutes(minutes) {
-  if (!Number.isFinite(minutes)) return "—";
-  if (minutes < 1) return "< 1 min";
-  if (minutes < 60) return `${Math.round(minutes)} min`;
+  if (!Number.isFinite(minutes)) return t("empty");
+  if (minutes < 1) return t("under_minute");
+  if (minutes < 60) return t("minutes", {n: Math.round(minutes)});
   const hours = Math.floor(minutes / 60);
   const rest = Math.round(minutes - hours * 60);
-  return `${hours} h ${String(rest).padStart(2, "0")}`;
+  return t("hours", {hours, minutes: String(rest).padStart(2, "0")});
 }
 
 function paletteColor(t) {
@@ -371,7 +367,7 @@ function travelTo(solution, point) {
 
 function routeLabel(routeId) {
   const info = app.data.routeInfo[routeId];
-  return `${MODE_LABELS[info.mode] ?? "Ligne"} ${info.name}`;
+  return `${MODE_LABELS[info.mode] ?? t("line")} ${info.name}`;
 }
 
 /** Reconstitue l'itinéraire (marche, lignes, correspondances) vers un point. */
@@ -379,7 +375,7 @@ function buildItinerary(solution, point) {
   const { graph, data } = app;
   const result = travelTo(solution, point);
   if (result.station === -1) {
-    return { minutes: result.minutes, steps: [{ kind: "walk", text: "Tout à pied", minutes: result.minutes }] };
+    return { minutes: result.minutes, steps: [{ kind: "walk", text: t("walk_all"), minutes: result.minutes }] };
   }
 
   const chain = [];
@@ -387,13 +383,13 @@ function buildItinerary(solution, point) {
   chain.reverse();
 
   const name = (state) => data.stations[graph.station[state]].name;
-  const steps = [{ kind: "walk", text: `À pied jusqu'à ${name(chain[0])}`, minutes: solution.seedWalk[chain[0]] }];
+  const steps = [{ kind: "walk", text: t("walk_to", {name: name(chain[0])}), minutes: solution.seedWalk[chain[0]] }];
   let legStart = chain[0];
   const closeLeg = (legEnd) => {
     steps.push({
       kind: "ride",
       route: graph.route[legStart],
-      text: `${name(legStart)} → ${name(legEnd)}`,
+      text: t("ride_leg", {from: name(legStart), to: name(legEnd)}),
       wait: graph.wait[legStart],
       minutes: solution.dist[legEnd] - solution.dist[legStart],
     });
@@ -405,14 +401,14 @@ function buildItinerary(solution, point) {
     closeLeg(from);
     if (graph.station[from] !== graph.station[to]) {
       const meters = walkMeters(data.stations[graph.station[from]].point, data.stations[graph.station[to]].point);
-      steps.push({ kind: "walk", text: `Correspondance à pied vers ${name(to)}`, minutes: walkMinutes(meters) });
+      steps.push({ kind: "walk", text: t("transfer_to", {name: name(to)}), minutes: walkMinutes(meters) });
     }
     legStart = to;
   }
   closeLeg(chain[chain.length - 1]);
   // La sortie du quai (métro) est comptée avec la marche finale.
   const exit = graph.access[chain[chain.length - 1]];
-  steps.push({ kind: "walk", text: "À pied jusqu'à l'arrivée", minutes: result.walk + exit });
+  steps.push({ kind: "walk", text: t("walk_final"), minutes: result.walk + exit });
   return { minutes: result.minutes, steps };
 }
 
@@ -725,7 +721,7 @@ function drawIsochrones() {
     }
     candidates.sort((p, q) => p.at[1] - q.at[1]);
     const best = candidates.find((candidate) => isOnLand(candidate.world));
-    if (best) labels.push({ text: `${threshold} min`, at: best.at });
+    if (best) labels.push({ text: t("minutes", {n: threshold}), at: best.at });
   }
   useScreenTransform();
   ctx.textAlign = "center";
@@ -865,9 +861,9 @@ function render() {
   drawStops();
   if (app.to) {
     const minutes = app.solution ? formatMinutes(travelTo(app.solution, app.to.point).minutes) : null;
-    drawMarker(app.to.point, COLORS.to, app.heatFrom === "to" ? `Arrivée · ${minutes}` : minutes);
+    drawMarker(app.to.point, COLORS.to, app.heatFrom === "to" ? `${t("arrival")} · ${minutes}` : minutes);
   }
-  if (app.from) drawMarker(app.from.point, COLORS.from, "Départ");
+  if (app.from) drawMarker(app.from.point, COLORS.from, t("departure"));
 }
 
 function requestRender() {
@@ -919,7 +915,7 @@ function nearestStopName(point) {
 function describePlace(point) {
   const stop = nearestStopName(point);
   const commune = communeAt(point);
-  return commune && commune !== CITY.name ? `Près de ${stop} (${commune})` : `Près de ${stop}`;
+  return commune && commune !== CITY.name ? t("near_commune", {name: stop, commune}) : t("near", {name: stop});
 }
 
 function heatSource() {
@@ -972,7 +968,7 @@ function setHeatFrom(source) {
 }
 
 function updatePanel() {
-  $("tripFrom").textContent = app.from?.label ?? "—";
+  $("tripFrom").textContent = app.from?.label ?? t("empty");
   const result = $("tripResult");
   if (!app.to || !app.solution) {
     result.hidden = true;
@@ -995,13 +991,13 @@ function updatePanel() {
             badge.textContent = info.name;
             badge.style.background = info.color;
             badge.style.color = contrastText(info.color);
-            badge.title = routeLabel(step.route);
+            badge.title = info.longName || routeLabel(step.route);
           } else {
             badge.classList.add("walk");
-            badge.textContent = "🚶";
+            badge.textContent = t("walk");
           }
           const text = document.createElement("span");
-          text.textContent = step.kind === "ride" ? `${step.text} · attente ~${Math.round(step.wait)} min` : step.text;
+          text.textContent = step.kind === "ride" ? t("wait", {text: step.text, minutes: Math.round(step.wait)}) : step.text;
           const minutes = document.createElement("span");
           minutes.className = "minutes";
           minutes.textContent = formatMinutes(step.minutes);
@@ -1018,11 +1014,10 @@ function updatePanel() {
       const byFoot = walkMinutes(hypot(source.point, station.point));
       return Math.min(byFoot, app.heatSolution.stationTime[index]) <= REACH_MINUTES;
     }).length;
-    const percent = Math.round((reachable / tram.length) * 100);
-    const where = source === app.from ? "de ce départ" : "de cette arrivée";
-    $("reach").textContent = `${percent} % des ${CITY.railStations} sont à moins de ${REACH_MINUTES} minutes ${where}${
-      app.includeBus ? ` (${CITY.railNoun} + ${CITY.busNoun})` : ""
-    }.`;
+    const percent = tram.length ? Math.round((reachable / tram.length) * 100) : 0;
+    const where = t(source === app.from ? "reach_from" : "reach_to");
+    $("reach").textContent = t("reach", {percent, stations: CITY.railStations, minutes: REACH_MINUTES, where,
+      modes: app.includeBus ? `${CITY.railNoun} + ${CITY.busNoun}` : CITY.railNoun});
   }
 }
 
@@ -1035,9 +1030,9 @@ function contrastText(hex) {
 function updateLegend() {
   const stops = PALETTE.map(([t, [r, g, b]]) => `rgb(${r}, ${g}, ${b}) ${Math.round(t * 100)}%`);
   $("legendBar").style.background = `linear-gradient(90deg, ${stops.join(", ")})`;
-  $("legendMid").textContent = `${Math.round(app.maxMinutes / 2)} min`;
-  $("legendMax").textContent = `${app.maxMinutes} min`;
-  $("maxValue").textContent = `${app.maxMinutes} min`;
+  $("legendMid").textContent = t("minutes", {n: Math.round(app.maxMinutes / 2)});
+  $("legendMax").textContent = t("minutes", {n: app.maxMinutes});
+  $("maxValue").textContent = t("minutes", {n: app.maxMinutes});
 }
 
 function formatPair(point) {
@@ -1055,7 +1050,7 @@ function syncUrl() {
   if (app.from) params.set("from", formatPair(app.from.point));
   if (app.to) params.set("to", formatPair(app.to.point));
   if (app.to && app.heatFrom === "to") params.set("carte", "arrivee");
-  if (app.includeBus) params.set("bus", "1");
+  if (!app.includeBus) params.set("bus", "0");
   if (app.maxMinutes !== DEFAULT_MAX) params.set("max", String(app.maxMinutes));
   const iso = [...app.isochrones].sort((a, b) => a - b).join(",");
   if (iso !== DEFAULT_ISOCHRONES.join(",")) params.set("iso", iso || "0");
@@ -1065,7 +1060,7 @@ function syncUrl() {
 
 function restoreFromUrl() {
   const params = new URLSearchParams(location.search);
-  app.includeBus = params.get("bus") === "1";
+  app.includeBus = params.get("bus") !== "0";
   $("busToggle").checked = app.includeBus;
   const max = Number(params.get("max"));
   if (max >= 20 && max <= 90) app.maxMinutes = max;
@@ -1175,7 +1170,7 @@ function endPointer(event) {
   canvas.classList.remove("panning");
   if (event.type === "pointercancel") return;
   if (drag.kind === "pan" && !drag.moved) {
-    if (!setTo(unproject(...eventPoint(event)))) toast("Ce point est hors de la Métropole ou sur l'eau.");
+    if (!setTo(unproject(...eventPoint(event)))) toast(t(`point_outside_${CITY.areaKey}`));
   } else if (drag.kind === "marker") {
     recompute();
     syncUrl();
@@ -1278,7 +1273,7 @@ $("maxRange").addEventListener("input", (event) => {
 
 $("swap").addEventListener("click", () => {
   if (!app.to) {
-    toast("Posez d'abord une arrivée sur la carte.");
+    toast(t("place_arrival"));
     return;
   }
   [app.from, app.to] = [app.to, app.from];
@@ -1297,18 +1292,18 @@ $("heatFrom").addEventListener("click", (event) => {
 
 $("locate").addEventListener("click", () => {
   if (!navigator.geolocation) {
-    toast("La géolocalisation n'est pas disponible.");
+    toast(t("geolocation_unavailable"));
     return;
   }
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
-      if (!setFrom(toWorld(coords.latitude, coords.longitude), "Ma position")) toast("Vous êtes hors de la Métropole.");
+      if (!setFrom(toWorld(coords.latitude, coords.longitude), t("my_position"))) toast(t(`position_outside_${CITY.areaKey}`));
     },
     (error) =>
       toast(
         error.code === error.PERMISSION_DENIED
-          ? "Position refusée : autorisez la localisation, ou cherchez une adresse."
-          : "Impossible d'obtenir votre position : cherchez plutôt une adresse.",
+          ? t("position_denied")
+          : t("position_error"),
       ),
     // Sans délai maximal, certains navigateurs intégrés (X, Reddit…) n'appellent jamais aucun des deux rappels.
     { timeout: 10000, maximumAge: 60000 },
@@ -1327,13 +1322,13 @@ $("share").addEventListener("click", async () => {
   }
   try {
     await navigator.clipboard.writeText(url);
-    toast("Lien copié !");
+    toast(t("link_copied"));
   } catch {
     toast(url);
   }
 });
 
-// --- Recherche d'adresse (Base Adresse Nationale) ----------------------------
+// --- Recherche d'adresse (Geoportail Luxembourg) ----------------------------
 
 const searchInput = $("searchInput");
 const searchResults = $("searchResults");
@@ -1357,19 +1352,37 @@ function searchStops(query) {
     .slice(0, 3)
     .map((station) => ({
       label: station.name,
-      context: `Station · ${station.routes
+      context: t("station_context", {lines: station.routes
         .filter((id) => app.data.routeInfo[id]?.rail)
         .map((id) => routeLabel(id))
-        .join(", ")}`,
+        .join(", ")}),
       point: station.point,
     }));
+}
+
+function featureCentre(feature) {
+  const geometry = feature.geometry;
+  if (!geometry) return null;
+  if (geometry.type === "Point") return geometry.coordinates;
+  if (Array.isArray(feature.bbox) && feature.bbox.length === 4 && feature.bbox.every(Number.isFinite)) {
+    return [(feature.bbox[0] + feature.bbox[2]) / 2, (feature.bbox[1] + feature.bbox[3]) / 2];
+  }
+  const vertices = [];
+  function visit(coords) {
+    if (!Array.isArray(coords)) return;
+    if (typeof coords[0] === "number" && typeof coords[1] === "number") {
+      if (coords.slice(0, 2).every(Number.isFinite)) vertices.push(coords);
+    } else coords.forEach(visit);
+  }
+  visit(geometry.coordinates);
+  return vertices.length ? [0, 1].map(axis => vertices.reduce((sum, vertex) => sum + vertex[axis], 0) / vertices.length) : null;
 }
 
 async function searchAddress(query) {
   const stops = searchStops(query);
   searchController?.abort();
   searchController = new AbortController();
-  const params = new URLSearchParams({ q: query, limit: "6", lat: String(DEFAULT_FROM.lat), lon: String(DEFAULT_FROM.lon) });
+  const params = new URLSearchParams({ query, limit: "6" });
   let payload = { features: [] };
   try {
     const response = await fetch(`${GEOCODER_URL}?${params}`, { signal: searchController.signal });
@@ -1379,10 +1392,14 @@ async function searchAddress(query) {
   }
   const addresses = payload.features
     .map((feature) => {
-      const [lon, lat] = feature.geometry.coordinates;
-      return { label: feature.properties.label, context: feature.properties.context, point: toWorld(lat, lon) };
+      const coordinates = featureCentre(feature);
+      if (!coordinates) return null;
+      const [lon, lat] = coordinates;
+      const layer = feature.properties?.layer_name || "";
+      const known = ["address", "street", "locality", "lieu_dit"].includes(layer);
+      return { label: feature.properties?.label || "", context: known ? t(`layer_${layer}`) : layer, point: toWorld(lat, lon) };
     })
-    .filter((result) => isOnLand(result.point));
+    .filter((result) => result && isOnLand(result.point));
   return [...stops, ...addresses].slice(0, 7);
 }
 
@@ -1438,9 +1455,9 @@ $("searchForm").addEventListener("submit", async (event) => {
   try {
     const results = await searchAddress(query);
     if (results.length) chooseResult(results[0]);
-    else toast("Adresse introuvable dans la Métropole.");
+    else toast(t(`address_outside_${CITY.areaKey}`));
   } catch (error) {
-    if (error.name !== "AbortError") toast("La recherche d'adresse ne répond pas.");
+    if (error.name !== "AbortError") toast(t("search_error"));
   }
 });
 
@@ -1466,5 +1483,5 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
-  $("tripFrom").textContent = "Impossible de charger le réseau.";
+  $("tripFrom").textContent = t("load_error");
 });
