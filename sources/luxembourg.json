@@ -1,21 +1,21 @@
 {
   "city": "Luxembourg",
-  "builtAt": "2026-10-06T17:35:25+00:00",
+  "builtAt": "2026-10-11T19:14:54+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h-20h",
   "gtfs": {
     "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR, TICE)",
     "dataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
-    "source": "https://download.data.public.lu/resources/horaires-et-arrets-des-transport-publics-gtfs/20261001-055928/gtfs-20260930-20261212.zip",
+    "source": "https://download.data.public.lu/resources/horaires-et-arrets-des-transport-publics-gtfs/20261008-043621/gtfs-20261007-20261212.zip",
     "how": "download",
-    "fetchedAt": "2026-10-06T12:38:55+00:00",
-    "bytes": 16847778,
-    "sha256": "8b4ea53d9c315dce3ca45d6610a624ebaa58f0069abcec9ce4523c8b43583876",
-    "resource": "gtfs-20260930-20261212.zip",
-    "lastModified": "2026-10-01T05:59:33.440000+00:00",
+    "fetchedAt": "2026-10-11T19:11:15+00:00",
+    "bytes": 16938246,
+    "sha256": "e04e0ced53825603c04a10823af605de61fc55c56205866305ee105adc8ac0d0",
+    "resource": "gtfs-20261007-20261212.zip",
+    "lastModified": "2026-10-08T04:36:27.245000+00:00",
     "feedInfo": null,
     "servicePeriod": [
-      "2026-09-30",
+      "2026-10-07",
       "2026-12-12"
     ]
   },
@@ -23,39 +23,39 @@
     "territory": "Grand-Duché de Luxembourg",
     "source": "Overpass API: [out:json][timeout:180];area[\"ISO3166-1\"=\"LU\"][admin_level=2]->.lu;relation(area.lu)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;",
     "how": "download",
-    "fetchedAt": "2026-10-06T12:45:19+00:00",
-    "bytes": 9796644,
-    "sha256": "936bd0fd9a66159f910cde83376a85f81454d05761d5792e5fba302ca5d6183f"
+    "fetchedAt": "2026-10-11T19:11:35+00:00",
+    "bytes": 9796329,
+    "sha256": "d0603c3e33cc21ae382a10bd5fe6f15592f66ed0638bd453525a98fe66a77076"
   },
   "openStreetMap": {
     "licence": "ODbL, © contributeurs OpenStreetMap",
     "osm_communes": {
       "source": "Overpass API: [out:json][timeout:180];area[\"ISO3166-1\"=\"LU\"][admin_level=2]->.lu;relation(area.lu)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T12:45:19+00:00",
-      "bytes": 9796644,
-      "sha256": "936bd0fd9a66159f910cde83376a85f81454d05761d5792e5fba302ca5d6183f"
+      "fetchedAt": "2026-10-11T19:11:35+00:00",
+      "bytes": 9796329,
+      "sha256": "d0603c3e33cc21ae382a10bd5fe6f15592f66ed0638bd453525a98fe66a77076"
     },
     "osm_water_parks": {
       "source": "Overpass API: [out:json][timeout:180];(relation[\"natural\"=\"water\"](49.44,5.72,50.19,6.54);way[\"natural\"=\"water\"](49.44,5.72,50.19,6.54);relation[\"leisure\"=\"park\"](49.56,6.06,49.65,6.2);way[\"leisure\"=\"park\"](49.56,6.06,49.65,6.2););out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T12:45:23+00:00",
-      "bytes": 7011694,
-      "sha256": "d1c394c9756131d90e8881e1b9d12aa9cb016c36956246da1b8ce1ad217d6994"
+      "fetchedAt": "2026-10-11T19:12:33+00:00",
+      "bytes": 6957534,
+      "sha256": "a4442a3b6cf2472c100fc982fefb9a9a966a5c82d35665554826ee16113854da"
     },
     "osm_rivers": {
       "source": "Overpass API: [out:json][timeout:110];way[\"waterway\"~\"^(river|stream)$\"][\"name\"~\"^(Alzette|Pétrusse|Sûre|Moselle)( - .*)?$\"][\"tunnel\"!~\".\"](49.44,5.72,50.19,6.54);out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T16:20:09+00:00",
-      "bytes": 219460,
-      "sha256": "a301f9f23e2f9ef0f4e7bb7915505bfa03aec3da30e9f10553bfafc38c24e1d6"
+      "fetchedAt": "2026-10-11T19:12:36+00:00",
+      "bytes": 219584,
+      "sha256": "9dd2aae2a8b2ddb452e28f98c5d8d1f4dccbeae5dad87996b1ca01f38a4a62e5"
     },
     "osm_bridges": {
       "source": "Overpass API: [out:json][timeout:110];way[\"bridge\"][\"highway\"][\"highway\"!~\"^(motorway|motorway_link|trunk|trunk_link|construction|proposed)$\"][\"foot\"!=\"no\"](49.44,5.72,50.19,6.54);out geom;",
       "how": "download",
-      "fetchedAt": "2026-10-06T16:25:32+00:00",
-      "bytes": 2264294,
-      "sha256": "252049b1ad19f4af39c8d241908bc965fce9f7206ccced4a976b6d617a677717"
+      "fetchedAt": "2026-10-11T19:13:11+00:00",
+      "bytes": 2253801,
+      "sha256": "7bbf8b24865a9d4f82b2c8ea68d9b3b86e90b86f0395146fe9fe9a794886b6af"
     }
   },
   "railGeometry": "GTFS shapes.txt",
