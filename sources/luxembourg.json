@@ -1,21 +1,21 @@
 {
   "city": "Luxembourg",
-  "builtAt": "2026-10-11T19:14:54+00:00",
+  "builtAt": "2026-10-20T17:05:32+00:00",
   "referenceDate": "2026-11-10",
   "serviceWindow": "7h-20h",
   "gtfs": {
     "network": "Mobilitéit (AVL, CFL, Luxtram, RGTR, TICE)",
     "dataset": "https://data.public.lu/fr/datasets/horaires-et-arrets-des-transport-publics-gtfs/",
-    "source": "https://download.data.public.lu/resources/horaires-et-arrets-des-transport-publics-gtfs/20261008-043621/gtfs-20261007-20261212.zip",
+    "source": "https://download.data.public.lu/resources/horaires-et-arrets-des-transport-publics-gtfs/20261015-054835/gtfs-20261014-20261212.zip",
     "how": "download",
-    "fetchedAt": "2026-10-11T19:11:15+00:00",
-    "bytes": 16938246,
-    "sha256": "e04e0ced53825603c04a10823af605de61fc55c56205866305ee105adc8ac0d0",
-    "resource": "gtfs-20261007-20261212.zip",
-    "lastModified": "2026-10-08T04:36:27.245000+00:00",
+    "fetchedAt": "2026-10-20T17:03:26+00:00",
+    "bytes": 16891134,
+    "sha256": "41a70ebe7bf1700a4fd3c3a9f8a6354148c7876dd912164a256bcb06be61edf9",
+    "resource": "gtfs-20261014-20261212.zip",
+    "lastModified": "2026-10-15T05:48:40.704000+00:00",
     "feedInfo": null,
     "servicePeriod": [
-      "2026-10-07",
+      "2026-10-14",
       "2026-12-12"
     ]
   },
