@@ -16,7 +16,9 @@
           <p class="noscript">${noscript}</p>
         </noscript>
         <div id="mapStage" class="map-stage stage-3d">
-          <canvas id="sceneCanvas" tabindex="0" aria-label="${map_label}"></canvas>
+          <canvas id="sceneCanvas" tabindex="0" aria-label="${map_label}" aria-describedby="mapKeyboardHelp"></canvas>
+          <div class="map-crosshair" aria-hidden="true"></div>
+          <p id="mapKeyboardHelp" class="visually-hidden">${map_keyboard_help}</p>
           <div id="labels3d" class="labels-3d" aria-hidden="true"></div>
           <div id="fallback3d" class="fallback-3d" hidden>
             <p id="fallbackText"></p>
@@ -34,6 +36,11 @@
               <p id="tripTo" class="trip-to"></p>
               <p id="tripDuration" class="trip-duration"></p>
               <ol id="tripSteps" class="trip-steps"></ol>
+              <div id="heatFrom" class="segmented" role="group" aria-label="${heat_label}">
+                <span>${heat_from}</span>
+                <button type="button" data-source="from" aria-pressed="true">${from_departure}</button>
+                <button type="button" data-source="to" aria-pressed="false">${from_arrival}</button>
+              </div>
             </div>
             <p id="tripHint" class="trip-hint">${trip_hint}</p>
           </aside>

@@ -1010,10 +1010,12 @@ def city_lines(gtfs_path: Path, city: dict, reference_date: date) -> dict:
             shapes[key][row["shape_id"]] += 1
             if row["service_id"] in active:
                 day_trips[row["trip_id"]] = key
-        wanted = {counter.most_common(1)[0][0]: key for key, counter in shapes.items()}
+        # One shape per line and direction; two lines may share a shape, so the shapes to read are a separate set.
+        chosen = {key: counter.most_common(1)[0][0] for key, counter in shapes.items()}
+        needed = set(chosen.values())
         points: Dict[str, List[Tuple[int, Point]]] = defaultdict(list)
         for row in read_gtfs_table(archive, "shapes.txt"):
-            if row["shape_id"] in wanted:
+            if row["shape_id"] in needed:
                 points[row["shape_id"]].append((int(row["shape_pt_sequence"]), lonlat_to_xy(float(row["shape_pt_lon"]), float(row["shape_pt_lat"]))))
         first: Dict[str, Tuple[int, int]] = {}
         for row in read_gtfs_table(archive, "stop_times.txt"):
@@ -1028,14 +1030,13 @@ def city_lines(gtfs_path: Path, city: dict, reference_date: date) -> dict:
         if window_start <= seconds < window_end:
             departures[day_trips[trip]].append(seconds)
     lines: Dict[str, dict] = {}
-    for shape_id, (route_id, direction) in sorted(wanted.items(), key=lambda item: item[1]):
+    for (route_id, direction), shape_id in sorted(chosen.items()):
         name = routes[route_id]
-        line = lines.setdefault(name, {"name": name, "night": bool(night.match(name)), "shapes": [], "headway": None})
+        line = lines.setdefault(name, {"name": name, "night": bool(night.match(name)), "shapes": [], "headways": []})
         line["shapes"].append(flat_ring(simplify_polyline([point for _, point in sorted(points[shape_id])], MIN_LINE_DISTANCE)))
+        # Interval of this direction (minutes), None without two departures in the window.
         times = sorted(departures.get((route_id, direction), []))
-        if len(times) >= 2:
-            headway = round(statistics.median(b - a for a, b in zip(times, times[1:])) / 60, 1)
-            line["headway"] = headway if line["headway"] is None else min(line["headway"], headway)
+        line["headways"].append(round(statistics.median(b - a for a, b in zip(times, times[1:])) / 60, 1) if len(times) >= 2 else None)
     order = lambda line: (line["night"], int(re.sub(r"\D", "", line["name"]) or 0), line["name"])
     return {"agency": config["agency"], "lines": sorted(lines.values(), key=order)}
 

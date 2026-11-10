@@ -53,6 +53,7 @@ const app = {
   showNightLines: false,
   showVehicles: !matchMedia("(prefers-reduced-motion: reduce)").matches,
   night: false,
+  heatFrom: "from", // la carte des temps part du départ ou de l'arrivée, comme en 2D (carte=arrivee)
   maxMinutes: DEFAULT_MAX,
   autoScale: true,
   isochrones: [15, 30],
@@ -335,6 +336,19 @@ function lineMaterial(color, width, extra = {}) {
   return material;
 }
 
+/** Libère les géométries (partagées par le liseré et la ligne) et les matériaux d'un groupe avant de le remplacer. */
+function disposeGroup(group) {
+  const geometries = new Set();
+  group.traverse((object) => {
+    if (object.geometry) geometries.add(object.geometry);
+    if (object.material) {
+      lineMaterials.delete(object.material);
+      object.material.dispose();
+    }
+  });
+  for (const geometry of geometries) geometry.dispose();
+}
+
 function addLine(group, positions, color, width, { halo = true, glow = false, order = 0 } = {}) {
   const geometry = new LineGeometry();
   geometry.setPositions(positions);
@@ -377,7 +391,7 @@ function prepareLines() {
     const number = parseInt(line.name.replace(/\D/g, ""), 10) || 0;
     const color = BUS_COLORS[number % BUS_COLORS.length];
     line.color = color;
-    for (const flat of line.shapes) {
+    line.shapes.forEach((flat, direction) => {
       const points = [];
       let x = 0;
       let y = 0;
@@ -386,8 +400,8 @@ function prepareLines() {
         y += flat[i + 1];
         points.push([x, y]);
       }
-      shapes.push({ kind: line.night ? "night" : "bus", name: line.name, color, headway: line.headway, ...toPositions(points) });
-    }
+      shapes.push({ kind: line.night ? "night" : "bus", name: line.name, color, headway: line.headways?.[direction] ?? null, ...toPositions(points) });
+    });
   }
   // Intervalle des lignes ferrées : deux fois l'attente moyenne au départ (horaire réel du graphe).
   const waits = new Map();
@@ -405,7 +419,7 @@ function prepareLines() {
 
 function drawLines() {
   relief.remove(lineGroup);
-  for (const child of lineGroup.children) child.material.dispose();
+  disposeGroup(lineGroup);
   lineGroup = new THREE.Group();
   const night = app.night;
   for (const shape of app.shapes) {
@@ -486,7 +500,7 @@ function moveVehicles(now) {
 
 function drawRoute() {
   relief.remove(routeGroup);
-  for (const child of routeGroup.children) child.material?.dispose();
+  disposeGroup(routeGroup);
   routeGroup = new THREE.Group();
   if (app.to && app.solution) {
     const itinerary = core.buildItinerary(app.model, app.data, app.solution, app.to.point, t);
@@ -541,10 +555,16 @@ function describePlace(point) {
   return commune && commune !== CITY.name ? t("near_commune", {name: stop, commune}) : t("near", {name: stop});
 }
 
+function heatSource() {
+  return app.heatFrom === "to" && app.to ? app.to : app.from;
+}
+
 function recompute({ fast = false } = {}) {
   if (!app.from) return;
   app.solution = app.model.solveFrom(app.from.point, { includeBus: app.includeBus });
-  app.grid = core.computeGrid(app.model, app.data, app.solution);
+  const source = heatSource();
+  app.heatSolution = source === app.from ? app.solution : app.model.solveFrom(source.point, { includeBus: app.includeBus });
+  app.grid = core.computeGrid(app.model, app.data, app.heatSolution);
   paintSurfaces({ fast });
   if (!fast) {
     drawRoute();
@@ -561,14 +581,23 @@ function setFrom(point, labelText = null, { fast = false } = {}) {
   return true;
 }
 
-function setTo(point, labelText = null) {
+function setTo(point, labelText = null, { quiet = false } = {}) {
   if (!core.isOnLand(app.data, point)) return false;
   app.to = { point, label: labelText ?? describePlace(point) };
-  drawRoute();
-  updatePanel();
-  syncUrl();
+  if (app.heatFrom === "to") recompute();
+  else {
+    drawRoute();
+    updatePanel();
+  }
+  if (!quiet) syncUrl();
   requestRender();
   return true;
+}
+
+function setHeatFrom(source) {
+  app.heatFrom = source === "to" && app.to ? "to" : "from";
+  for (const button of $("heatFrom").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.source === app.heatFrom));
+  recompute();
 }
 
 function routeLabel(routeId) {
@@ -615,11 +644,12 @@ function updatePanel() {
         }),
     );
   }
-  if (app.solution) {
+  if (app.heatSolution) {
+    const source = heatSource();
     const rail = app.data.stations.map((station, index) => ({ station, index })).filter(({ station }) => station.rail);
-    const reachable = rail.filter(({ station, index }) => Math.min(app.model.walkMinutes(hypot(app.from.point, station.point)), app.solution.stationTime[index]) <= REACH_MINUTES).length;
+    const reachable = rail.filter(({ station, index }) => Math.min(app.model.walkMinutes(hypot(source.point, station.point)), app.heatSolution.stationTime[index]) <= REACH_MINUTES).length;
     const percent = rail.length ? Math.round((reachable / rail.length) * 100) : 0;
-    $("reach").textContent = t("reach", {percent, stations: CITY.railStations, minutes: REACH_MINUTES, where: t("reach_from"),
+    $("reach").textContent = t("reach", {percent, stations: CITY.railStations, minutes: REACH_MINUTES, where: t(source === app.from ? "reach_from" : "reach_to"),
       modes: app.includeBus ? `${CITY.railNoun} + ${CITY.busNoun}` : CITY.railNoun});
   }
 }
@@ -648,6 +678,7 @@ function syncUrl() {
   const params = new URLSearchParams();
   if (app.from) params.set("from", formatPair(app.from.point));
   if (app.to) params.set("to", formatPair(app.to.point));
+  if (app.to && app.heatFrom === "to") params.set("carte", "arrivee");
   if (!app.includeBus) params.set("bus", "0");
   if (!app.autoScale) {
     params.set("max", String(app.maxMinutes));
@@ -682,7 +713,8 @@ function restoreFromUrl() {
   const from = parsePair(params.get("from"));
   if (!from || !setFrom(from)) setFrom(toWorld(CITY.defaultFrom.lat, CITY.defaultFrom.lon), CITY.defaultFrom.label);
   const to = parsePair(params.get("to"));
-  if (to) setTo(to);
+  if (to && setTo(to, null, { quiet: true }) && params.get("carte") === "arrivee") setHeatFrom("to");
+  syncUrl();
 }
 
 // --- Ambiance, échelle, rendu ---------------------------------------------------------
@@ -825,7 +857,7 @@ canvas.addEventListener("pointerdown", (event) => {
   const at = [event.clientX - rect.left, event.clientY - rect.top];
   const kind = event.pointerType === "touch" ? "touch" : "mouse";
   const onFrom = app.from?.screen && Math.hypot(at[0] - app.from.screen[0], at[1] - app.from.screen[1]) <= (kind === "touch" ? 30 : 18);
-  press = { at, kind, moved: false, dragging: onFrom, button: event.button };
+  press = { at, kind, moved: false, dragging: onFrom, button: event.button, start: { ...app.from } };
   if (onFrom) {
     controls.enabled = false;
     canvas.classList.add("dragging");
@@ -852,19 +884,32 @@ canvas.addEventListener("pointermove", (event) => {
   }
 });
 
+/** Fin d'un glisser du départ : le point relâché devient le départ complet (panneau, itinéraire, URL) ;
+ * hors du pays ou glisser annulé, le départ d'avant revient. */
+function endDrag(event, cancelled) {
+  controls.enabled = true;
+  canvas.classList.remove("dragging");
+  cancelAnimationFrame(dragFrame);
+  const point = cancelled || !press.moved ? null : groundAt(event.clientX, event.clientY);
+  if (point && setFrom(point)) return;
+  if (point) toast(t(`point_outside_${CITY.areaKey}`));
+  setFrom(press.start.point, press.start.label);
+}
+
+canvas.addEventListener("pointercancel", (event) => {
+  if (press?.dragging) endDrag(event, true);
+  press = null;
+});
+
 canvas.addEventListener("pointerup", (event) => {
   if (!press) return;
   const { dragging, moved, button } = press;
-  press = null;
   if (dragging) {
-    controls.enabled = true;
-    canvas.classList.remove("dragging");
-    cancelAnimationFrame(dragFrame);
-    const point = groundAt(event.clientX, event.clientY);
-    if (moved && point && !setFrom(point)) toast(t(`point_outside_${CITY.areaKey}`));
-    else if (!moved) recompute();
+    endDrag(event, false);
+    press = null;
     return;
   }
+  press = null;
   if (moved || button !== 0) return;
   const point = groundAt(event.clientX, event.clientY);
   if (!point || !setTo(point)) toast(t(`point_outside_${CITY.areaKey}`));
@@ -913,10 +958,19 @@ $("ambiance").addEventListener("click", (event) => {
 
 $("removeTo").addEventListener("click", () => {
   app.to = null;
+  if (app.heatFrom === "to") setHeatFrom("from");
   drawRoute();
   updatePanel();
   syncUrl();
   requestRender();
+});
+
+$("heatFrom").addEventListener("click", (event) => {
+  const source = event.target.closest("button")?.dataset.source;
+  if (source && source !== app.heatFrom) {
+    setHeatFrom(source);
+    syncUrl();
+  }
 });
 
 $("topView").addEventListener("click", () => {
@@ -951,6 +1005,29 @@ $("share").addEventListener("click", async () => {
 });
 
 document.addEventListener("visibilitychange", () => updateLoop());
+
+// Clavier, comme la 2D : les flèches déplacent la vue, Entrée pose l'arrivée au centre, Maj + Entrée le départ.
+canvas.addEventListener("keydown", (event) => {
+  if (!app.data) return;
+  const forward = new THREE.Vector3().subVectors(controls.target, camera.position).setY(0);
+  if (forward.lengthSq() < 1) forward.set(0, 0, -1);
+  forward.normalize().multiplyScalar(viewDistance() * 0.08);
+  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+  const moves = { ArrowUp: forward, ArrowDown: forward.clone().negate(), ArrowRight: right, ArrowLeft: right.clone().negate() };
+  if (moves[event.key]) {
+    camera.position.add(moves[event.key]);
+    controls.target.add(moves[event.key]);
+    requestRender();
+  } else if (event.key === "Enter") {
+    const rect = canvas.getBoundingClientRect();
+    const centre = groundAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const placed = centre && (event.shiftKey ? setFrom(centre) : setTo(centre));
+    if (!placed) toast(t(`point_outside_${CITY.areaKey}`));
+  } else {
+    return;
+  }
+  event.preventDefault();
+});
 
 // --- Recherche d'adresse (même logique que la 2D) ----------------------------------------
 
