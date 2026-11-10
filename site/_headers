@@ -1,5 +1,5 @@
 /*
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://map.geoportail.lu; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

@@ -269,19 +269,29 @@ la Ville, pour comprendre pourquoi un quartier proche à vol d'oiseau est loin e
 1. Le site DOIT proposer une page `/3d/` (et `/en/3d/`, `/de/3d/`), sans remplacer la carte 2D, marquée `noindex`
    et absente du sitemap pendant l'essai.
 2. La page DOIT afficher le relief du pays à partir du MNT LiDAR 2024 de l'ACT (CC0), précalculé et servi par le
-   site : pays à 100 m, Luxembourg-Ville à 10 m.
+   site : pays à environ 100 m, Luxembourg-Ville à environ 10 m.
 3. Les temps, la carte de chaleur et les isochrones DOIVENT venir des mêmes fonctions que la 2D
-   (`site/solver.mjs`, `site/map-core.mjs`) : une même URL donne la même durée et les mêmes étapes en 2D et en 3D.
-4. La page DOIT afficher le tram, les trains et les lignes de bus de la Ville de Luxembourg (agence AVL du GTFS),
-   tracées depuis `shapes.txt`, avec une palette propre au site. Les lignes de nuit (CN) PEUVENT être affichées en
-   option, signalées comme non comptées dans les temps.
-5. Départ, arrivée, itinéraire, bus, partage et paramètres d'URL DOIVENT suivre R5 à R9 ; les liens entre la 2D
-   et la 3D DOIVENT garder l'état.
-6. Le relief et les lignes DOIVENT peser moins de 2 Mo compressés ; le moteur 3D (three.js) DOIT être servi par
-   le site, en version épinglée, sans CDN.
-7. La page DOIT proposer une ambiance jour (par défaut) et une ambiance nuit, et respecter
-   `prefers-reduced-motion`.
-8. SANS WebGL2, la page DOIT afficher un message et un lien vers la carte 2D avec le même état.
-9. Les bâtiments 3D du geoportail PEUVENT être chargés en option, désactivés par défaut ; la CSP n'est alors
-   élargie que sur `/3d/`.
-
+   (`site/solver.mjs`, `site/map-core.mjs`) : les mêmes paramètres d'URL donnent la même durée et les mêmes étapes
+   en 2D et en 3D.
+4. La page DOIT afficher le tram et les trains (tracés du fichier principal, `routes`, issus de `shapes.txt`) et
+   les lignes de bus de la Ville de Luxembourg (agence « Ville de Luxembourg » du GTFS, tracées depuis
+   `shapes.txt`), avec une palette propre au site. Le build DOIT échouer s'il ne trouve aucune ligne de la Ville.
+   Les lignes de nuit (CN) PEUVENT être affichées en option, signalées comme non comptées dans les temps.
+5. Départ et arrivée (clic, glisser-déposer), itinéraire, bus, échelle et isochrones (mêmes options et même
+   échelle automatique que R6), partage et paramètres d'URL (R9) DOIVENT suivre la 2D ; les liens entre la 2D et
+   la 3D DOIVENT garder l'état. Les noms d'arrêts selon le zoom (R6.5) ne sont pas repris pendant l'essai.
+6. Poids : relief et lignes sous 2 Mo compressés, page 3D complète (three.js, données du réseau, relief, lignes)
+   sous 5 Mo compressés. three.js DOIT être servi par le site, en version épinglée, sans CDN. Les fichiers de
+   relief et de lignes DOIVENT être chargés avec une empreinte `?v=` (cache immuable de `/data/*`).
+7. Performance : au moins 30 images par seconde en orbite sur un téléphone de milieu de gamme et 60 sur un
+   ordinateur à GPU intégré ; au plus 400 000 triangles à l'écran ; première image en moins de 3 s sur une
+   connexion rapide.
+8. La page DOIT proposer une ambiance jour (par défaut) et une ambiance nuit, choisie par un paramètre d'URL (pas
+   de stockage local), et respecter `prefers-reduced-motion`. Les véhicules animés DOIVENT être signalés comme
+   illustratifs (fréquences réelles, positions inventées).
+9. SANS WebGL2, si la création du contexte échoue ou si le contexte est perdu, la page DOIT afficher un message
+   et un lien vers la carte 2D avec le même état.
+10. À étudier : bâtiments 3D du geoportail en option, désactivés par défaut. Prérequis : chargeur 3D Tiles servi
+    par le site, CSP élargie seulement sur `/3d/*`, `/en/3d/*`, `/de/3d/*` (`! Content-Security-Policy` puis la
+    politique complète), décodeurs sans worker ni WASM ou `worker-src` ajouté.
+11. Les mentions légales DOIVENT citer le MNT de l'ACT (CC0) et three.js (MIT).

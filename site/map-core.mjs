@@ -96,12 +96,13 @@ export function nearestStopName(data, point, railRadius) {
 
 // --- Itinéraire -------------------------------------------------------------------
 
-/** Reconstitue l'itinéraire (marche, lignes, correspondances) vers un point. `t` donne les textes traduits. */
+/** Reconstitue l'itinéraire (marche, lignes, correspondances) vers un point. `t` donne les textes traduits.
+ * `chain` : états du graphe parcourus (vide à pied) ; `states` d'une étape « ride » : états de début et de fin. */
 export function buildItinerary(model, data, solution, point, t) {
   const { graph } = model;
   const result = model.travelTo(solution, point);
   if (result.station === -1) {
-    return { minutes: result.minutes, steps: [{ kind: "walk", text: t("walk_all"), minutes: result.minutes }] };
+    return { minutes: result.minutes, steps: [{ kind: "walk", text: t("walk_all"), minutes: result.minutes }], chain: [] };
   }
 
   const chain = model.chainTo(solution, result.station);
@@ -320,7 +321,7 @@ export function contourSegments(bounds, grid, threshold) {
 export function normalize(text) {
   return text
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
