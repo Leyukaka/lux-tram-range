@@ -16,3 +16,6 @@
 /solver.mjs
   ! Cache-Control
   Cache-Control: no-cache
+/map-core.mjs
+  ! Cache-Control
+  Cache-Control: no-cache
