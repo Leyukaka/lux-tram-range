@@ -293,3 +293,53 @@ Les deux cartes ont été fusionnées à la demande de l'owner : une Carte pays 
   (le sous-ensemble nécessaire à `app.js`). `app.js` lit ses textes via `t(key, vars)`.
 - Le sélecteur de langue est un lien vers la page équivalente. Il recopie `location.search` au clic.
 - Les noms d'arrêts et de communes restent ceux des sources ; seuls les libellés de l'interface sont traduits.
+
+## Vue 3D (R17, essai de novembre 2026)
+
+Trois maquettes ont été montrées à l'owner (relief habillé, temps = altitude, maquette de nuit). Retenu : un mélange
+du relief habillé (jour) et de la maquette de nuit.
+
+### Architecture
+
+- **Moteur** : three.js 0.187, copié dans `site/vendor/three-0.187.0/` par `tools/vendor_three.py` (version
+  épinglée, empreinte vérifiée, imports réécrits en chemins relatifs, licence MIT). Ni worker, ni eval, ni import
+  map : la CSP du site reste valable.
+- **Code partagé** : `site/map-core.mjs` (grille, image de la carte de chaleur, isochrones, itinéraire,
+  géographie), déplacé tel quel de `app.js`. `tools/check_grid.mjs` donne une empreinte de la grille, de l'image
+  et des isochrones pour 4 départs ; elle est identique avant et après le déplacement.
+- **Relief** : `build_terrain.py` lit le MNT LiDAR 2024 (COG de 40 Go, EPSG:2169) par requêtes partielles avec
+  GDAL (`gdalwarp` sur `/vsicurl`, dans l'image `ghcr.io/osgeo/gdal` lancée par Podman : les DLL de GDAL sont
+  bloquées par la stratégie de contrôle des applications de Windows). La grille de sortie est en EPSG:4326 alignée
+  sur les mètres du site (x et y sont proportionnels à la longitude et à la latitude), donc sans reprojection
+  côté client. Pays : 596 x 842 à environ 100 m (moyenne) ; ville : 1006 x 1002 à environ 10 m (bilinéaire) sur
+  `viewBbox`. Écriture en décimètres, écarts par ligne, JSON servi compressé par Cloudflare.
+- **Lignes** : `site/data/luxembourg-lines.json`, à part du fichier principal (R4.2 inchangé) : forme la plus
+  fréquente par ligne AVL (agence 6, lignes de jour 2 à 33 et CN1 à CN8) et T1, simplifiée à 25 m.
+- **Page** : `templates/3d.html`, `site/app3d.js`, pages générées par `build_pages.py`.
+
+### Direction artistique et interaction (proposée par Fable)
+
+Un seul moteur, deux ambiances. Par défaut « Jour » : relief réel, carte de chaleur drapée, isochrones 15 et 30,
+lignes en rubans opaques à liseré. Bascule « Nuit » : fond sombre, lignes lumineuses, véhicules brillants. La nuit
+est un choix mémorisé, pas une conséquence de `prefers-color-scheme`.
+
+- **Carte de chaleur** : même calcul et même palette que la 2D, drapée sur le relief, jamais en mélange additif.
+  L'ombrage du relief reste borné (plus ou moins 12 % de luminance) pour ne pas fausser les couleurs. Nuit : sol
+  `#10151f`, eau `#0a1626`, fond `#070a10`, carte de chaleur à 0,88.
+- **Isochrones** : 15 et 30 min, trait de 2 px, noir à liseré blanc le jour, blanc à 90 % la nuit ; étiquettes en
+  HTML superposé.
+- **Lignes** : tram `#8E24AA`, trains `#37474F` (nuit `#B0BEC5`). Bus AVL : 12 teintes par numéro modulo 12
+  (`#1565C0`, `#EF6C00`, `#00838F`, `#C62828`, `#2E7D32`, `#AD1457`, `#283593`, `#F9A825`, `#00897B`, `#6D4C41`,
+  `#D81B60`, `#558B2F`), éclaircies de 35 % la nuit ; le liseré porte le contraste. Rubans au-dessus du relief
+  lissé par maximum glissant sur 300 m, pour enjamber l'Alzette et la Pétrusse. Nuit : second passage additif,
+  trois fois plus large, opacité 0,22, en guise de lueur, sans bloom.
+- **Relief et caméra** : exagération verticale de 1,5 en vue proche à 2,5 en vue lointaine, affichée dans la
+  légende. Vue de dessus, nord en haut. Inclinaison et distance bornées. Soleil au nord-ouest, pas d'ombres
+  portées. Brouillard lié à la distance de la caméra.
+- **Véhicules** : nombre par ligne tiré de l'intervalle médian réel, temps accéléré, plafonnés (300 sur
+  ordinateur, 120 sur mobile), désactivés par défaut si `prefers-reduced-motion`.
+- **Rendu** : à la demande, boucle seulement si des véhicules circulent et que l'onglet est visible.
+- **Bascules** : jour/nuit, bus, lignes de nuit CN, isochrones, véhicules, bâtiments (option), vue de dessus.
+- **À éviter** : carte de chaleur en lueur, post-traitement plein écran, tubes 3D pour les lignes, boucle de rendu
+  permanente, nuit automatique.
+

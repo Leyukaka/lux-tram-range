@@ -119,3 +119,41 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - Build, `check_trips`, banc d'essai, tailles (R4.2).
   - Navigateur : ville puis pays, échelle automatique, redirections, mobile.
   - _Exigences : R4.2, R6.6, R14_
+
+- [x] 22. Specs de la vue 3D
+  - R17, section « Vue 3D » de design.md, tâches 23 à 30.
+  - _Exigences : R17_
+
+- [x] 23. Module partagé `site/map-core.mjs`
+  - Déplacer de `app.js` les fonctions pures ; `app.js` garde des wrappers ; `no-cache` dans `site/_headers`.
+  - `tools/check_grid.mjs` : empreintes identiques avant et après.
+  - _Exigences : R17.3_
+
+- [ ] 24. three.js servi par le site
+  - `tools/vendor_three.py`, `site/vendor/three-0.187.0/`, cache immuable, licence.
+  - _Exigences : R17.6_
+
+- [ ] 25. Relief
+  - `build_terrain.py` (GDAL dans Podman), `site/data/terrain/`, provenance dans `sources/`.
+  - _Exigences : R17.2, R17.6_
+
+- [ ] 26. Lignes de la Ville
+  - `site/data/luxembourg-lines.json` (AVL, CN, T1) dans `build_data.py`.
+  - _Exigences : R17.4, R17.6_
+
+- [ ] 27. Page `/3d/`
+  - Gabarit, `build_pages.py`, traductions, liens 2D et 3D, repli sans WebGL2, `noindex`.
+  - _Exigences : R17.1, R17.5, R17.8_
+
+- [ ] 28. Scène
+  - Relief pays et ville, carte de chaleur drapée, isochrones, lignes, départ et arrivée, itinéraire, jour et nuit,
+    véhicules.
+  - _Exigences : R17.2 à R17.7_
+
+- [ ] 29. Bâtiments du geoportail (option)
+  - _Exigences : R17.9_
+
+- [ ] 30. Vérification
+  - `check_grid`, `check_trips`, banc d'essai ; mêmes durées en 2D et en 3D ; navigateur, mobile, console.
+  - _Exigences : R17_
+

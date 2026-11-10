@@ -258,3 +258,28 @@ Revue OWASP du 2026-10-06 (deux revues indépendantes, en lecture seule). Aucune
 6. Le Pipeline DOIT refuser une ressource GTFS hors de `https://download.data.public.lu/` et toute redirection
    qui quitte HTTPS.
 7. Le déploiement DOIT utiliser une version épinglée de Wrangler.
+
+### R17 : Vue 3D (essai)
+
+**User story :** en tant qu'utilisateur, je veux voir les temps de trajet sur le relief du pays, avec les lignes de
+la Ville, pour comprendre pourquoi un quartier proche à vol d'oiseau est loin en transports.
+
+1. Le site DOIT proposer une page `/3d/` (et `/en/3d/`, `/de/3d/`), sans remplacer la carte 2D, marquée `noindex`
+   et absente du sitemap pendant l'essai.
+2. La page DOIT afficher le relief du pays à partir du MNT LiDAR 2024 de l'ACT (CC0), précalculé et servi par le
+   site : pays à 100 m, Luxembourg-Ville à 10 m.
+3. Les temps, la carte de chaleur et les isochrones DOIVENT venir des mêmes fonctions que la 2D
+   (`site/solver.mjs`, `site/map-core.mjs`) : une même URL donne la même durée et les mêmes étapes en 2D et en 3D.
+4. La page DOIT afficher le tram, les trains et les lignes de bus de la Ville de Luxembourg (agence AVL du GTFS),
+   tracées depuis `shapes.txt`, avec une palette propre au site. Les lignes de nuit (CN) PEUVENT être affichées en
+   option, signalées comme non comptées dans les temps.
+5. Départ, arrivée, itinéraire, bus, partage et paramètres d'URL DOIVENT suivre R5 à R9 ; les liens entre la 2D
+   et la 3D DOIVENT garder l'état.
+6. Le relief et les lignes DOIVENT peser moins de 2 Mo compressés ; le moteur 3D (three.js) DOIT être servi par
+   le site, en version épinglée, sans CDN.
+7. La page DOIT proposer une ambiance jour (par défaut) et une ambiance nuit, et respecter
+   `prefers-reduced-motion`.
+8. SANS WebGL2, la page DOIT afficher un message et un lien vers la carte 2D avec le même état.
+9. Les bâtiments 3D du geoportail PEUVENT être chargés en option, désactivés par défaut ; la CSP n'est alors
+   élargie que sur `/3d/`.
+
