@@ -227,16 +227,25 @@ Les deux cartes ont été fusionnées à la demande de l'owner : une Carte pays 
 
 - `cities/luxembourg.json` : `gridCellMeters: 200`, `viewBbox` sur Luxembourg-Ville, rivières Alzette, Pétrusse
   (cours d'eau), Sûre, Moselle. `cities/luxembourg-ville.json` est supprimé.
-- **Format compact** de `site/data/luxembourg.json` (`meta.format = 2`), décodé au chargement par
+- **Format compact** de `site/data/luxembourg.json` (`meta.format = 3`, novembre 2026), décodé au chargement par
   `site/data-format.mjs` (`decode(data)`) dans la forme historique ; le reste de `app.js` et les outils
-  (`tools/*.mjs`) restent inchangés. Le calcul des trajets (marche avec ponts, plus courts chemins, meilleur arrêt
-  d'arrivée) est dans `site/solver.mjs` (`createModel(data)`), importé par `app.js` et par les deux outils de
-  contrôle, qui testent donc le code livré :
+  (`tools/*.mjs`) restent inchangés. Le décodeur lit encore le format 2 (une page en cache peut le demander juste
+  après un déploiement) et refuse tout autre format. Le calcul des trajets (marche avec ponts, plus courts chemins,
+  meilleur arrêt d'arrivée) est dans `site/solver.mjs` (`createModel(data)`), importé par `app.js` et par les deux
+  outils de contrôle, qui testent donc le code livré. Les deux modules sont servis en `Cache-Control: no-cache`
+  (`site/_headers`), pour qu'un `app.js` récent ne tombe jamais sur un décodeur périmé.
   - `routeStates` : `{"station": [...], "route": [indice dans "routeIds"], "wait": [...], "access": [...]}`
-    et `routeIds` ;
-  - `adjacency` : par état, une liste plate `[dst, poids, dst, poids, ...]` ;
-  - `cells` : `{"index": [rang dans la grille], "access": [[station, mètres, station, mètres, ...]]}` ;
-    rangée, colonne et centre se déduisent du rang et de `meta.bounds`.
+    et `routeIds` ; `stationStates` n'est plus écrit, le décodeur le déduit de `routeStates.station` ;
+  - `adjacency` : `{"targets": [...], "weights": [...]}`, par état les arêtes triées par cible, chaque cible en
+    écart à la précédente (la première : à l'état source), les poids en dixièmes de minute ;
+  - `cells` : `{"runs": [écart, longueur, ...], "stops": [[station, ...]], "bridged": [case, rang, mètres, ...]}`.
+    Rangée, colonne et centre se déduisent du rang et de `meta.bounds` ; la marche vers un arrêt est la ligne
+    droite depuis le centre, arrondie au mètre, sauf les paires listées dans `bridged` (détour par un pont) ;
+  - géométrie de dessin (`boroughs`, `arrondissements`, `water`, `parks`, `context`, tracés de `routes`) au
+    mètre, en écarts `[x0, y0, dx1, dy1, ...]` ; `outline` se déduit des anneaux extérieurs, `stations[].id`
+    n'est plus écrit. Rivières, ponts et arrêts restent au décimètre (calcul des traversées).
+  - Résultat (GTFS du 2026-11-05) : 17,6 Mo / 4,50 Mo gzip en format 2, 9,4 Mo / 1,74 Mo gzip en format 3.
+    Réseau et cases décodés identiques au format 2, géométrie à 0,5 m près.
 - **Zoom** : `fitView` cadre `viewBounds` (la ville) ; le zoom arrière descend jusqu'au cadrage de
   `meta.bounds` (le pays).
 - **Échelle automatique** : `autoScale()` choisit `maxMinutes` selon la largeur visible (45 min à 12 km, 90 min

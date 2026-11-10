@@ -1249,12 +1249,60 @@ def network_stats(city: dict, route_info, stations, route_states, station_states
     }
 
 
-def compact_network(route_states, station_states, adjacency, cells, cols: int) -> dict:
-    """Format 2 of the bundle (meta.format = 2): columns instead of objects, flat edge lists, cells by grid rank.
+def flat_ring(points: Sequence[Point]) -> List[int]:
+    """A line or ring at the meter, delta coded: [x0, y0, dx1, dy1, ...] (deltas of the rounded points, no drift)."""
+    flat, last = [], (0, 0)
+    for x, y in points:
+        point = (round(x), round(y))
+        flat += [point[0] - last[0], point[1] - last[1]]
+        last = point
+    return flat
+
+
+def flat_polygons(polygons: Sequence[Polygon]) -> List[List[List[int]]]:
+    return [[flat_ring(ring) for ring in polygon] for polygon in polygons]
+
+
+def compact_network(route_states, adjacency, cells, stations, bounds, cols: int, rows: int) -> dict:
+    """Format 3 of the network (meta.format = 3), turned back into the original layout by site/data-format.mjs.
+    - stationStates is left out: it is the list of the states of each stop, read from routeStates.station.
+    - Edges are sorted by target, which is given relative to the previous one (the first: to the source state);
+      weights are in tenths of a minute (build_graph already rounds them so).
+    - Cells are runs of grid ranks (gap, length) and, for each, its nearest stops. The walk to a stop is the
+      straight line from the centre of the cell, computed in the browser; only the walks through a bridge are kept,
+      as [cell, rank in the cell, meters].
     A 200 m grid over the whole country holds about 65,000 cells: the original layout would not fit the 25 MiB
-    limit of a Workers asset. site/data-format.mjs turns it back into the original layout in the browser."""
+    limit of a Workers asset, and the compact one keeps the download small."""
     route_ids = sorted({state["routeId"] for state in route_states})
     route_index = {route_id: i for i, route_id in enumerate(route_ids)}
+    targets, weights = [], []
+    for source, edges in enumerate(adjacency):
+        last = source
+        row_targets, row_weights = [], []
+        for target, weight in sorted(edges):
+            row_targets.append(target - last)
+            row_weights.append(round(weight * 10))
+            last = target
+        targets.append(row_targets)
+        weights.append(row_weights)
+    # Same arithmetic as decode(): the centre of a cell from the rounded bounds, the stops at their rounded point.
+    left, bottom = round(bounds[0], 1), round(bounds[1], 1)
+    cell_w = (round(bounds[2], 1) - left) / cols
+    cell_h = (round(bounds[3], 1) - bottom) / rows
+    points = [round_point(station["point"]) for station in stations]
+    runs, last_rank, cell_stops, bridged = [], -1, [], []
+    for i, cell in enumerate(cells):
+        rank = cell["row"] * cols + cell["col"]
+        if runs and rank == last_rank + 1:
+            runs[-1] += 1
+        else:
+            runs += [rank - last_rank - 1, 1]
+        last_rank = rank
+        centre = (left + (cell["col"] + 0.5) * cell_w, bottom + (cell["row"] + 0.5) * cell_h)
+        cell_stops.append([station for station, _ in cell["access"]])
+        for k, (station, meters) in enumerate(cell["access"]):
+            if round(meters) != round(dist(centre, points[station])):
+                bridged += [i, k, round(meters)]
     return {
         "routeIds": route_ids,
         "routeStates": {
@@ -1263,12 +1311,8 @@ def compact_network(route_states, station_states, adjacency, cells, cols: int) -
             "wait": [state["wait"] for state in route_states],
             "access": [state["access"] for state in route_states],
         },
-        "stationStates": station_states,
-        "adjacency": [[value for edge in edges for value in edge] for edges in adjacency],
-        "cells": {
-            "index": [cell["row"] * cols + cell["col"] for cell in cells],
-            "access": [[value for station, meters in cell["access"] for value in (station, round(meters))] for cell in cells],
-        },
+        "adjacency": {"targets": targets, "weights": weights},
+        "cells": {"runs": runs, "stops": cell_stops, "bridged": bridged},
     }
 
 
@@ -1400,20 +1444,21 @@ def main() -> None:
             "walkMetersPerMinute": WALK_METERS_PER_MINUTE,
             "originStationCount": ORIGIN_NEAREST_STATIONS,
             "transferWalk": TRANSFER_WALK,
-            "format": 2,
+            "format": 3,
             "sea": bool(context),
         },
-        "context": [serialize_polygon(polygon) for polygon in context],
-        "boroughs": communes,
-        **({"arrondissements": arrondissements} if arrondissements else {}),
+        "context": flat_polygons(context),
+        # The outline of an area is the outer ring of each of its polygons: decode() rebuilds it.
+        "boroughs": [{**{k: v for k, v in area.items() if k != "outline"}, "polygons": flat_polygons(area["polygons"])} for area in communes],
+        **({"arrondissements": [{**{k: v for k, v in area.items() if k != "outline"}, "polygons": flat_polygons(area["polygons"])} for area in arrondissements]} if arrondissements else {}),
         **({"rivers": [[round_point(point) for point in line] for line in river_lines]} if river_lines else {}),
         **({"bridges": [[round_point(a), round_point(b), round(length, 1)] for a, b, length in bridges]} if bridges else {}),
-        "water": [serialize_polygon(polygon) for polygon in masked_water + water],
-        "parks": [serialize_polygon(polygon) for polygon in parks],
-        "routes": routes,
+        "water": flat_polygons(masked_water + water),
+        "parks": flat_polygons(parks),
+        "routes": [{**route, "points": flat_ring(route["points"])} for route in routes],
         "routeInfo": route_info,
-        "stations": [{**station, "point": round_point(station["point"])} for station in stations],
-        **compact_network(route_states, station_states, adjacency, cells, cols),
+        "stations": [{**{key: value for key, value in station.items() if key != "id"}, "point": round_point(station["point"])} for station in stations],
+        **compact_network(route_states, adjacency, cells, stations, bounds, cols, rows),
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
