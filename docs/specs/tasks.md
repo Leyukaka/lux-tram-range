@@ -129,8 +129,8 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - `tools/check_grid.mjs` : empreintes identiques avant et après.
   - _Exigences : R17.3_
 
-- [ ] 24. three.js servi par le site
-  - `tools/vendor_three.py`, `site/vendor/three-0.187.0/`, cache immuable, licence.
+- [x] 24. three.js servi par le site
+  - `tools/vendor_three.py`, `site/vendor/three-0.186.1/`, cache immuable, licence.
   - _Exigences : R17.6_
 
 - [ ] 25. Relief

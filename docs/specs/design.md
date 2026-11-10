@@ -301,8 +301,9 @@ du relief habillé (jour) et de la maquette de nuit.
 
 ### Architecture
 
-- **Moteur** : three.js 0.187, copié dans `site/vendor/three-0.187.0/` par `tools/vendor_three.py` (version
-  épinglée, empreinte vérifiée, imports réécrits en chemins relatifs, licence MIT). Ni worker, ni eval, ni import
+- **Moteur** : three.js 0.186.1 (publié en septembre 2026 ; la 0.187 avait moins de deux semaines), copié dans `site/vendor/three-0.186.1/` par `tools/vendor_three.py` (version
+  épinglée, empreinte vérifiée, imports réécrits en chemins relatifs, licence MIT). L'archive npm de cette version n'a pas de fichiers minifiés : environ 440 Ko compressés
+  (`three.core.js` 286 Ko, `three.module.js` 131 Ko, contrôles et lignes 20 Ko), en cache immuable. Ni worker, ni eval, ni import
   map : la CSP du site reste valable.
 - **Code partagé** : `site/map-core.mjs` (grille, image de la carte de chaleur, isochrones, itinéraire,
   géographie), déplacé tel quel de `app.js`. `tools/check_grid.mjs` donne une empreinte de la grille, de l'image
