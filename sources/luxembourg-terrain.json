@@ -1,0 +1,31 @@
+{
+  "builtAt": "2026-11-10T23:17:22+00:00",
+  "source": "https://download.data.public.lu/resources/bd-l-lidar2024-releve-3d-du-territoire-luxembourgeois/20241223-093912/MNT_Lidar2024.tif",
+  "dataset": "https://data.public.lu/fr/datasets/lidar-2024-releve-3d-du-territoire-luxembourgeois/",
+  "licence": "CC0, Administration du cadastre et de la topographie (ACT)",
+  "tool": "gdalwarp (ghcr.io/osgeo/gdal:ubuntu-small-3.10.3)",
+  "grids": {
+    "country": {
+      "file": "site/data/terrain/luxembourg-country.json",
+      "size": [
+        596,
+        842
+      ],
+      "resampling": "average",
+      "minMeters": 130.7,
+      "maxMeters": 557.1,
+      "sha256": "12b79386c52fa4d13e882c1f732f2a026adf50d329df765ba4745cc2f9333b00"
+    },
+    "city": {
+      "file": "site/data/terrain/luxembourg-city.json",
+      "size": [
+        1006,
+        1002
+      ],
+      "resampling": "bilinear",
+      "minMeters": 228.3,
+      "maxMeters": 412.8,
+      "sha256": "8c207d4805e00e9816599bb23c84d24cf9672ed1a87e623e5330456737cf1bc0"
+    }
+  }
+}

@@ -133,7 +133,7 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - `tools/vendor_three.py`, `site/vendor/three-0.186.1/`, cache immuable, licence.
   - _Exigences : R17.6_
 
-- [ ] 25. Relief
+- [x] 25. Relief
   - `build_terrain.py` (GDAL dans Podman), `site/data/terrain/`, provenance dans `sources/`.
   - _Exigences : R17.2, R17.6_
 

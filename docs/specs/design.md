@@ -314,6 +314,9 @@ du relief habillé (jour) et de la maquette de nuit.
   sur les mètres du site (x et y sont proportionnels à la longitude et à la latitude), donc sans reprojection
   côté client. Pays : 596 x 842 à environ 100 m (moyenne) ; ville : 1006 x 1002 à environ 10 m (bilinéaire) sur
   `viewBbox`. Écriture en décimètres, écarts par ligne, JSON servi compressé par Cloudflare.
+  Résultat (2026-11-11) : pays 131 à 557 m, 1,44 Mo (372 Ko gzip) ; ville 228 à 413 m, 2,62 Mo (679 Ko gzip).
+  Contrôle : l'Alzette au Grund (241 m) et au Pfaffenthal (236 m), la Pétrusse sous le pont Adolphe (251 m)
+  tombent en fond de vallée ; Kirchberg 321 m, place d'Armes 305 m.
 - **Lignes** : `site/data/luxembourg-lines.json`, à part du fichier principal (R4.2 inchangé) : forme la plus
   fréquente par ligne AVL (agence 6, lignes de jour 2 à 33 et CN1 à CN8) et T1, simplifiée à 25 m.
 - **Page** : `templates/3d.html`, `site/app3d.js`, pages générées par `build_pages.py`.
