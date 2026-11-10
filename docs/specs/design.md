@@ -232,7 +232,7 @@ Les deux cartes ont été fusionnées à la demande de l'owner : une Carte pays 
   (`tools/*.mjs`) restent inchangés. Le décodeur lit encore le format 2 (une page en cache peut le demander juste
   après un déploiement) et refuse tout autre format. Le calcul des trajets (marche avec ponts, plus courts chemins,
   meilleur arrêt d'arrivée) est dans `site/solver.mjs` (`createModel(data)`), importé par `app.js` et par les deux
-  outils de contrôle, qui testent donc le code livré. Les deux modules sont servis en `Cache-Control: no-cache`
+  outils de contrôle, qui testent donc le code livré. Les modules (`data-format.mjs`, `solver.mjs`, `map-core.mjs`) sont servis en `Cache-Control: no-cache`
   (`site/_headers`), pour qu'un `app.js` récent ne tombe jamais sur un décodeur périmé.
   - `routeStates` : `{"station": [...], "route": [indice dans "routeIds"], "wait": [...], "access": [...]}`
     et `routeIds` ; `stationStates` n'est plus écrit, le décodeur le déduit de `routeStates.station` ;
@@ -321,22 +321,30 @@ du relief habillé (jour) et de la maquette de nuit.
 - **Lignes** : `site/data/luxembourg-lines.json`, à part du fichier principal (R4.2 inchangé) : forme la plus
   fréquente par ligne AVL (agence 6, lignes de jour 2 à 33 et CN1 à CN8) et T1, simplifiée à 25 m.
 - **Page** : `templates/3d.html`, `site/app3d.js`, pages générées par `build_pages.py`.
+- **Maillage** : pas un sommet par échantillon. Le relief est envoyé au GPU en texture de hauteur ; maillage du pays
+  en treillis de 200 m (environ 300 x 420 sommets), de la ville en 20 m sur ordinateur et 40 m sur mobile, déplacés
+  dans le vertex shader ; normales tirées de la texture.
+- **Cache** : `/*` en `no-cache` (revalidation par ETag) pour qu'une page, son script et les modules importés
+  soient toujours de la même version ; `/data/*` et `/vendor/*` en cache immuable, avec `?v=` dans l'URL des données.
+- **Trains** : tracés de `routes` du fichier principal (GTFS `shapes.txt`, `railGeometry` vaut `gtfs`).
 
 ### Direction artistique et interaction (proposée par Fable)
 
 Un seul moteur, deux ambiances. Par défaut « Jour » : relief réel, carte de chaleur drapée, isochrones 15 et 30,
 lignes en rubans opaques à liseré. Bascule « Nuit » : fond sombre, lignes lumineuses, véhicules brillants. La nuit
-est un choix mémorisé, pas une conséquence de `prefers-color-scheme`.
+est un paramètre d'URL (`ambiance=nuit`), pas une conséquence de `prefers-color-scheme` ni un stockage local.
 
 - **Carte de chaleur** : même calcul et même palette que la 2D, drapée sur le relief, jamais en mélange additif.
   L'ombrage du relief reste borné (plus ou moins 12 % de luminance) pour ne pas fausser les couleurs. Nuit : sol
   `#10151f`, eau `#0a1626`, fond `#070a10`, carte de chaleur à 0,88.
-- **Isochrones** : 15 et 30 min, trait de 2 px, noir à liseré blanc le jour, blanc à 90 % la nuit ; étiquettes en
+- **Isochrones** : mêmes options et même échelle automatique que la 2D, tracées dans la texture drapée (trait de
+  2 px à l'écran), noir à liseré blanc le jour, blanc à 90 % la nuit ; étiquettes en
   HTML superposé.
 - **Lignes** : tram `#8E24AA`, trains `#37474F` (nuit `#B0BEC5`). Bus AVL : 12 teintes par numéro modulo 12
   (`#1565C0`, `#EF6C00`, `#00838F`, `#C62828`, `#2E7D32`, `#AD1457`, `#283593`, `#F9A825`, `#00897B`, `#6D4C41`,
   `#D81B60`, `#558B2F`), éclaircies de 35 % la nuit ; le liseré porte le contraste. Rubans au-dessus du relief
-  lissé par maximum glissant sur 300 m, pour enjamber l'Alzette et la Pétrusse. Nuit : second passage additif,
+  lissé par maximum glissant sur 600 m le long du tracé (300 m de chaque côté), pour enjamber l'Alzette et la
+  Pétrusse ; contrôle sur le pont Grande-Duchesse Charlotte (T1), le Pont Rouge et le viaduc de Pulvermühle. Nuit : second passage additif,
   trois fois plus large, opacité 0,22, en guise de lueur, sans bloom.
 - **Relief et caméra** : exagération verticale de 1,5 en vue proche à 2,5 en vue lointaine, affichée dans la
   légende. Vue de dessus, nord en haut. Inclinaison et distance bornées. Soleil au nord-ouest, pas d'ombres

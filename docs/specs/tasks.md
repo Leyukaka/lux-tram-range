@@ -138,22 +138,31 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - _Exigences : R17.2, R17.6_
 
 - [ ] 26. Lignes de la Ville
-  - `site/data/luxembourg-lines.json` (AVL, CN, T1) dans `build_data.py`.
+  - `site/data/luxembourg-lines.json` (agence « Ville de Luxembourg », lignes de jour et CN) dans `build_data.py`.
   - _Exigences : R17.4, R17.6_
 
 - [ ] 27. Page `/3d/`
-  - Gabarit, `build_pages.py`, traductions, liens 2D et 3D, repli sans WebGL2, `noindex`.
-  - _Exigences : R17.1, R17.5, R17.8_
+  - Gabarit, `build_pages.py`, traductions, liens 2D et 3D, repli sans WebGL2, `noindex`, mentions légales.
+  - _Exigences : R17.1, R17.5, R17.9, R17.11_
 
-- [ ] 28. Scène
-  - Relief pays et ville, carte de chaleur drapée, isochrones, lignes, départ et arrivée, itinéraire, jour et nuit,
-    véhicules.
-  - _Exigences : R17.2 à R17.7_
+- [ ] 28. Scène : relief
+  - Textures de hauteur, maillages pays et ville, ombrage, caméra, vue de dessus.
+  - _Exigences : R17.2, R17.7_
 
-- [ ] 29. Bâtiments du geoportail (option)
-  - _Exigences : R17.9_
+- [ ] 29. Scène : carte de chaleur et isochrones
+  - Texture drapée (même image que la 2D), isochrones, légende, échelle automatique.
+  - _Exigences : R17.3, R17.5_
 
-- [ ] 30. Vérification
-  - `check_grid`, `check_trips`, banc d'essai ; mêmes durées en 2D et en 3D ; navigateur, mobile, console.
+- [ ] 30. Scène : lignes, départ, arrivée, itinéraire
+  - Rubans avec ponts, marqueurs déplaçables, panneau, recherche, partage.
+  - _Exigences : R17.4, R17.5_
+
+- [ ] 31. Ambiance nuit et véhicules
+  - _Exigences : R17.8_
+
+- [ ] 32. Bâtiments du geoportail (à étudier)
+  - _Exigences : R17.10_
+
+- [ ] 33. Vérification
+  - `check_grid`, `check_trips`, banc d'essai ; mêmes durées en 2D et en 3D ; navigateur, mobile, console, poids.
   - _Exigences : R17_
-
