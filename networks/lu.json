@@ -20,5 +20,10 @@
       "minutes": 1.0,
       "headway": 4
     }
-  ]
+  ],
+  "cityLines": {
+    "agency": "Ville de Luxembourg",
+    "names": "^([1-6]?[0-9]|CN[0-9]+)$",
+    "night": "^CN"
+  }
 }

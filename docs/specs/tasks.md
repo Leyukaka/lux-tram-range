@@ -137,7 +137,7 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - `build_terrain.py` (GDAL dans Podman), `site/data/terrain/`, provenance dans `sources/`.
   - _Exigences : R17.2, R17.6_
 
-- [ ] 26. Lignes de la Ville
+- [x] 26. Lignes de la Ville
   - `site/data/luxembourg-lines.json` (agence « Ville de Luxembourg », lignes de jour et CN) dans `build_data.py`.
   - _Exigences : R17.4, R17.6_
 

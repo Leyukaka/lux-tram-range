@@ -981,6 +981,65 @@ def extract_network(gtfs_path: Path, city: dict):
     return reference_date, complexes, edges, waits, route_info, shape_routes, extra_links, timetable
 
 
+def city_lines(gtfs_path: Path, city: dict, reference_date: date) -> dict:
+    """Bus lines of the city operator for the 3D view (R17.4), apart from the main bundle: per line and direction,
+    the most common shape (simplified like the rail lines) and the median interval between departures on the
+    reference day, 7h-20h (illustrative vehicles). `cityLines` in the network file: operator name, line names."""
+    config = city.get("cityLines")
+    if not config:
+        return {}
+    names = re.compile(config["names"])
+    night = re.compile(config["night"])
+    with zipfile.ZipFile(gtfs_path) as archive:
+        agencies = {row["agency_id"] for row in read_gtfs_table(archive, "agency.txt") if row["agency_name"].startswith(config["agency"])}
+        routes = {
+            row["route_id"]: row["route_short_name"]
+            for row in read_gtfs_table(archive, "routes.txt")
+            if row["agency_id"] in agencies and names.match(row["route_short_name"])
+        }
+        if not routes:
+            raise RuntimeError(f"No line of {config['agency']} in the feed")
+        services = services_by_date(list(read_gtfs_table(archive, "calendar.txt")), list(read_gtfs_table(archive, "calendar_dates.txt")))
+        active = services.get(reference_date, frozenset())
+        shapes: Dict[Tuple[str, str], Counter] = defaultdict(Counter)
+        day_trips: Dict[str, Tuple[str, str]] = {}
+        for row in read_gtfs_table(archive, "trips.txt"):
+            if row["route_id"] not in routes or not row.get("shape_id"):
+                continue
+            key = (row["route_id"], row.get("direction_id") or "0")
+            shapes[key][row["shape_id"]] += 1
+            if row["service_id"] in active:
+                day_trips[row["trip_id"]] = key
+        wanted = {counter.most_common(1)[0][0]: key for key, counter in shapes.items()}
+        points: Dict[str, List[Tuple[int, Point]]] = defaultdict(list)
+        for row in read_gtfs_table(archive, "shapes.txt"):
+            if row["shape_id"] in wanted:
+                points[row["shape_id"]].append((int(row["shape_pt_sequence"]), lonlat_to_xy(float(row["shape_pt_lon"]), float(row["shape_pt_lat"]))))
+        first: Dict[str, Tuple[int, int]] = {}
+        for row in read_gtfs_table(archive, "stop_times.txt"):
+            trip = row["trip_id"]
+            if trip in day_trips:
+                sequence = int(row["stop_sequence"])
+                if trip not in first or sequence < first[trip][0]:
+                    first[trip] = (sequence, parse_time(row["departure_time"]))
+    departures: Dict[Tuple[str, str], List[int]] = defaultdict(list)
+    window_start, window_end = SERVICE_WINDOW
+    for trip, (_, seconds) in first.items():
+        if window_start <= seconds < window_end:
+            departures[day_trips[trip]].append(seconds)
+    lines: Dict[str, dict] = {}
+    for shape_id, (route_id, direction) in sorted(wanted.items(), key=lambda item: item[1]):
+        name = routes[route_id]
+        line = lines.setdefault(name, {"name": name, "night": bool(night.match(name)), "shapes": [], "headway": None})
+        line["shapes"].append(flat_ring(simplify_polyline([point for _, point in sorted(points[shape_id])], MIN_LINE_DISTANCE)))
+        times = sorted(departures.get((route_id, direction), []))
+        if len(times) >= 2:
+            headway = round(statistics.median(b - a for a, b in zip(times, times[1:])) / 60, 1)
+            line["headway"] = headway if line["headway"] is None else min(line["headway"], headway)
+    order = lambda line: (line["night"], int(re.sub(r"\D", "", line["name"]) or 0), line["name"])
+    return {"agency": config["agency"], "lines": sorted(lines.values(), key=order)}
+
+
 def build_graph(complexes: Sequence[dict], edges, waits, route_info: Dict[str, dict], access_minutes: Dict[str, float],
                 rivers: Rivers, timetable: Timetable):
     """Two states per station, line and direction.
@@ -1432,6 +1491,11 @@ def main() -> None:
         south, west, north, east = city["viewBbox"]
         view_bounds = (*lonlat_to_xy(west, south), *lonlat_to_xy(east, north))
     cells, mask = build_grid(land, masked_water, stations, bounds, cols, rows, rivers)
+    lines = city_lines(gtfs_dir / "gtfs.zip", city, reference_date)
+    if lines:
+        lines_path = ROOT / "site" / "data" / f"{city['slug']}-lines.json"
+        lines_path.write_text(json.dumps(lines, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+        print(f"Wrote {lines_path.relative_to(ROOT)} ({lines_path.stat().st_size / 1000:.0f} kB, {len(lines['lines'])} lignes)")
 
     output = {
         "meta": {
