@@ -1324,3 +1324,122 @@ output {
 .city-card { padding:1.5rem; }
 .trip-steps .badge.walk { font-size:.7rem; min-width:3.5rem; }
 @media (max-width:720px) { .site-header { padding:1rem; } .site-header nav a { padding:.5rem; } }
+
+/* --- Vue 3D (essai, R17) ------------------------------------------------- */
+
+.stage-3d {
+  background: #f1efe9;
+}
+
+.stage-3d.night {
+  background: #070a10;
+}
+
+#sceneCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#sceneCanvas.over-marker {
+  cursor: grab;
+}
+
+#sceneCanvas.dragging {
+  cursor: grabbing;
+}
+
+.labels-3d {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.label-3d {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stage-3d.night .label-3d {
+  background: rgba(10, 14, 22, 0.88);
+  color: #eef2f7;
+}
+
+.stage-3d.night .trip-panel,
+.stage-3d.night .legend {
+  border-color: #1f2a3a;
+  background: rgba(10, 14, 22, 0.88);
+  color: #eef2f7;
+}
+
+.stage-3d.night .trip-steps,
+.stage-3d.night .trip-to,
+.stage-3d.night .trip-from {
+  color: #e6ebf2;
+}
+
+.stage-3d.night .trip-hint,
+.stage-3d.night .legend-labels,
+.stage-3d.night .trip-eyebrow {
+  color: #b9c3d0;
+}
+
+.legend-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+}
+
+.fallback-3d {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: #f1efe9;
+  text-align: center;
+}
+
+.fallback-3d[hidden] {
+  display: none;
+}
+
+.fallback-3d p {
+  max-width: 46ch;
+  margin: 0;
+}
+
+.steps-3d,
+.note-3d {
+  max-width: 70ch;
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.note-3d {
+  padding: 0 18px 16px;
+}
+
+.line-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.line-chips .line-badge {
+  min-width: 2.4em;
+  text-align: center;
+}

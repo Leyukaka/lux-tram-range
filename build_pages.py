@@ -39,11 +39,11 @@ def contrast_text(color):
 def path_for(lang, page=''):
     return '/' + (lang + '/' if lang != 'fr' else '') + page
 
-def render(lang, page, title, body, config=None):
+def render(lang, page, title, body, config=None, script='app.js', noindex=False):
     texts = translations(lang)
     # The 404 page is served for any missing URL: no canonical nor alternates, and kept out of the index.
     alternates = '' if page == '404.html' else ''.join(f'<link rel="alternate" hreflang="{code}" href="{esc(SITE_URL + path_for(code, page))}">' for code in LANGUAGES)
-    seo = '<meta name="robots" content="noindex">' if page == '404.html' else f'<link rel="canonical" href="{esc(SITE_URL + path_for(lang, page))}">'
+    seo = '<meta name="robots" content="noindex">' if page == '404.html' or noindex else f'<link rel="canonical" href="{esc(SITE_URL + path_for(lang, page))}">'
     switch = ' '.join(f'<a data-language href="{path_for(code, page)}" lang="{code}" hreflang="{code}"{' aria-current="page"' if code == lang else ''}>{code.upper()}</a>' for code in LANGUAGES)
     head = f'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{esc(title)}</title><meta name="description" content="{esc(texts["description"])}">{seo}{alternates}<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v={short_hash(SITE / "styles.css")}">'
     header = f'<header class="site-header"><a href="{path_for(lang)}">{esc(texts["site_title"])}</a><nav aria-label="{esc(texts["languages"])}">{switch}</nav></header>'
@@ -52,7 +52,7 @@ def render(lang, page, title, body, config=None):
     scripts = f'<script id="i18n" type="application/json">{blob}</script>'
     if config:
         scripts += '<script id="city-config" type="application/json">' + json.dumps(config, ensure_ascii=False).replace('</', '<\\/') + '</script>'
-        scripts += f'<script type="module" src="/app.js?v={short_hash(SITE / "app.js")}"></script>'
+        scripts += f'<script type="module" src="/{script}?v={short_hash(SITE / script)}"></script>'
     # Language links carry the map state (also for copy link and open in a new tab); app.js refreshes them.
     scripts += f'<script src="/lang.js?v={short_hash(SITE / "lang.js")}"></script>'
     return f'<!doctype html><html lang="{lang}"><head>{head}</head><body>{header}<main class="page">{body}</main>{footer}{scripts}</body></html>'
@@ -90,6 +90,22 @@ def render_city(city, cities, lang):
     config.update(dataVersion=short_hash(SITE / 'data' / f'{city["slug"]}.json'), railNoun=texts['rail_noun'], railStations=texts['rail_stations'], busNoun=texts['mode_bus'])
     return render(lang, city['path'], texts['map_title'].format(name=city['name']), body, config)
 
+def render_3d(city, lang):
+    """Trial 3D view (R17): same data and state as the map, on the relief of the country. Kept out of the index."""
+    texts = translations(lang)
+    values = {key: esc(value) for key, value in texts.items()}
+    values.update(headline=esc(texts['title_3d'].format(name=city['name'])), search_placeholder=esc(texts['search_placeholder'].format(example=city['searchExample'])), path_2d=path_for(lang, city['path']))
+    body = Template((ROOT / 'templates/3d.html').read_text(encoding='utf-8')).substitute(values)
+    data = SITE / 'data'
+    config = {key: city[key] for key in ('slug', 'name', 'defaultFrom', 'areaKey', 'defaultMax', 'scaleMax') if key in city}
+    config.update(
+        dataVersion=short_hash(data / f'{city["slug"]}.json'),
+        linesVersion=short_hash(data / f'{city["slug"]}-lines.json'),
+        terrainVersions={name: short_hash(data / 'terrain' / f'{city["slug"]}-{name}.json') for name in ('country', 'city')},
+        railNoun=texts['rail_noun'], railStations=texts['rail_stations'], busNoun=texts['mode_bus'],
+    )
+    return render(lang, city['path'] + '3d/', texts['title_3d'].format(name=city['name']), body, config, script='app3d.js', noindex=True)
+
 def main():
     cities = load_cities()
     urls = []
@@ -98,11 +114,13 @@ def main():
         pages = {'mentions-legales/': render(lang, 'mentions-legales/', texts['legal_title'], f'<section class="legal-copy"><h1>{esc(texts["legal_title"])}</h1><p>{texts["legal_text"]}</p><p>{author_line(texts)}</p><p>{esc(texts["licences"])}</p></section>')}
         for city in cities:
             pages[city['path']] = render_city(city, cities, lang)
-        for page, content in pages.items():
+        trials = {city['path'] + '3d/': render_3d(city, lang) for city in cities if (SITE / 'data' / f'{city["slug"]}-lines.json').exists()}
+        for page, content in {**pages, **trials}.items():
             output = SITE / path_for(lang, page).lstrip('/') / 'index.html'
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_text(content, encoding='utf-8')
-            urls.append(SITE_URL + path_for(lang, page))
+            if page not in trials:  # the 3D trial stays out of the sitemap
+                urls.append(SITE_URL + path_for(lang, page))
         error = render(lang, '404.html', texts['not_found'], f'<h1>{esc(texts["not_found"])}</h1><a href="{path_for(lang)}">{esc(texts["home"])}</a>')
         (SITE / path_for(lang, '404.html').lstrip('/')).write_text(error, encoding='utf-8')
     (SITE / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{esc(url)}</loc></url>' for url in urls) + '</urlset>', encoding='utf-8')

@@ -1,0 +1,92 @@
+      <section class="hero">
+        <h1>${headline}</h1>
+        <p class="lede">${intro_3d}</p>
+        <form id="searchForm" class="search" role="search" autocomplete="off">
+          <label class="visually-hidden" for="searchInput">${departure_address}</label>
+          <input id="searchInput" type="search" placeholder="${search_placeholder}" aria-describedby="searchStatus" disabled data-needs-data />
+          <button type="submit" class="button primary" disabled data-needs-data>${start_here}</button>
+          <ul id="searchResults" class="search-results" hidden></ul>
+          <p id="searchStatus" class="trip-hint" role="status" aria-live="polite"></p>
+        </form>
+        <p class="steps-3d">${step_3d}</p>
+      </section>
+
+      <section id="mapCard" class="map-card" aria-label="${map_label}" aria-busy="true">
+        <noscript>
+          <p class="noscript">${noscript}</p>
+        </noscript>
+        <div id="mapStage" class="map-stage stage-3d">
+          <canvas id="sceneCanvas" tabindex="0" aria-label="${map_label}"></canvas>
+          <div id="labels3d" class="labels-3d" aria-hidden="true"></div>
+          <div id="fallback3d" class="fallback-3d" hidden>
+            <p id="fallbackText"></p>
+            <a id="fallbackLink" class="button primary" href="${path_2d}" data-keep-state>${open_2d}</a>
+          </div>
+
+          <aside id="tripPanel" class="trip-panel" aria-live="polite">
+            <p class="trip-eyebrow">${departure}</p>
+            <p id="tripFrom" class="trip-from">${loading_relief}</p>
+            <div id="tripResult" class="trip-result" hidden>
+              <div class="trip-row">
+                <p class="trip-eyebrow">${arrival}</p>
+                <button id="removeTo" type="button" class="link-button">${remove}</button>
+              </div>
+              <p id="tripTo" class="trip-to"></p>
+              <p id="tripDuration" class="trip-duration"></p>
+              <ol id="tripSteps" class="trip-steps"></ol>
+            </div>
+            <p id="tripHint" class="trip-hint">${trip_hint}</p>
+          </aside>
+
+          <div id="toast" class="toast" role="status" hidden></div>
+
+          <div class="map-buttons">
+            <button id="topView" type="button" class="icon-button" aria-label="${top_view}" title="${top_view}">⊙</button>
+            <button id="fullscreen" type="button" class="icon-button" aria-label="${fullscreen}">⤢</button>
+          </div>
+
+          <div class="legend" role="group" aria-label="${scale}">
+            <div id="legendBar" class="legend-bar" aria-hidden="true"></div>
+            <div class="legend-labels"><span>0</span><span id="legendMid"></span><span id="legendMax"></span></div>
+            <p id="exaggeration" class="legend-note"></p>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="control-group">
+            <span class="control-label">${network_label}</span>
+            <label class="pill-toggle"><input type="checkbox" checked disabled /> ${rail_label}</label>
+            <label class="pill-toggle"><input id="busToggle" type="checkbox" checked /> ${mode_bus}</label>
+            <label class="pill-toggle"><input id="nightLinesToggle" type="checkbox" /> ${night_lines}</label>
+            <label class="pill-toggle"><input id="vehiclesToggle" type="checkbox" checked /> ${vehicles}</label>
+          </div>
+          <div id="isoToggles" class="control-group">
+            <span class="control-label">${isochrones}</span>
+            <label class="pill-toggle"><input type="checkbox" value="15" checked /> ${minute_15}</label>
+            <label class="pill-toggle"><input type="checkbox" value="30" checked /> ${minute_30}</label>
+            <label class="pill-toggle"><input type="checkbox" value="45" /> ${minute_45}</label>
+            <label class="pill-toggle"><input type="checkbox" value="60" /> ${minute_60}</label>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="maxRange">${scale}</label>
+            <input id="maxRange" type="range" min="20" max="90" step="5" value="45" />
+            <output id="maxValue" for="maxRange">${minute_45}</output>
+          </div>
+          <div id="ambiance" class="control-group segmented" role="group" aria-label="${ambiance}">
+            <span class="control-label">${ambiance}</span>
+            <button type="button" data-ambiance="jour" aria-pressed="true">${day}</button>
+            <button type="button" data-ambiance="nuit" aria-pressed="false">${night}</button>
+          </div>
+          <div class="control-group actions">
+            <a id="open2d" class="button" href="${path_2d}" data-keep-state>${view_2d}</a>
+            <button id="share" type="button" class="button primary">${share}</button>
+          </div>
+        </div>
+        <p id="reach" class="reach"></p>
+        <p class="note-3d">${vehicles_note} ${night_lines_note}</p>
+      </section>
+
+      <section class="section" aria-labelledby="city-lines-title">
+        <h2 id="city-lines-title">${city_lines}</h2>
+        <div id="cityLineChips" class="line-chips"></div>
+      </section>

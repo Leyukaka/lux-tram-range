@@ -635,7 +635,7 @@ function syncUrl() {
   }
   const query = params.toString().replaceAll("%2C", ",");
   history.replaceState(null, "", query ? `?${query}` : location.pathname);
-  for (const link of document.querySelectorAll("a[data-language]")) link.search = location.search;
+  for (const link of document.querySelectorAll("a[data-language], a[data-keep-state]")) link.search = location.search;
 }
 
 function restoreFromUrl() {

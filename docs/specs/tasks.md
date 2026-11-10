@@ -141,23 +141,23 @@ Une tâche correspond à un commit. Les références renvoient à `requirements.
   - `site/data/luxembourg-lines.json` (agence « Ville de Luxembourg », lignes de jour et CN) dans `build_data.py`.
   - _Exigences : R17.4, R17.6_
 
-- [ ] 27. Page `/3d/`
+- [x] 27. Page `/3d/`
   - Gabarit, `build_pages.py`, traductions, liens 2D et 3D, repli sans WebGL2, `noindex`, mentions légales.
   - _Exigences : R17.1, R17.5, R17.9, R17.11_
 
-- [ ] 28. Scène : relief
+- [x] 28. Scène : relief
   - Textures de hauteur, maillages pays et ville, ombrage, caméra, vue de dessus.
   - _Exigences : R17.2, R17.7_
 
-- [ ] 29. Scène : carte de chaleur et isochrones
+- [x] 29. Scène : carte de chaleur et isochrones
   - Texture drapée (même image que la 2D), isochrones, légende, échelle automatique.
   - _Exigences : R17.3, R17.5_
 
-- [ ] 30. Scène : lignes, départ, arrivée, itinéraire
+- [x] 30. Scène : lignes, départ, arrivée, itinéraire
   - Rubans avec ponts, marqueurs déplaçables, panneau, recherche, partage.
   - _Exigences : R17.4, R17.5_
 
-- [ ] 31. Ambiance nuit et véhicules
+- [x] 31. Ambiance nuit et véhicules
   - _Exigences : R17.8_
 
 - [ ] 32. Bâtiments du geoportail (à étudier)
