@@ -53,6 +53,8 @@ RIVER_POINT_DISTANCE = 20.0
 RIVER_BUCKET_METERS = 500.0
 # Longest walk through a bridge (40 min): beyond, walking is never the best way (also read by site/app.js).
 MAX_BRIDGE_WALK_METERS = 3000.0
+# Below this many points, StationIndex.nearest sorts them all instead of walking buckets.
+FEW_STATIONS = 256
 MIN_PARK_AREA = 20_000.0
 MIN_WATER_AREA = 15_000.0
 CONTEXT_RING_DISTANCE = 80.0
@@ -244,24 +246,38 @@ class StationIndex:
             x, y = points[index]
             self.buckets[(int(x // size), int(y // size))].append(index)
         self.empty = not indexes
+        # Few points (the rail stations): sorting them all is cheaper than walking rings of empty buckets.
+        self.few = list(indexes) if len(indexes) <= FEW_STATIONS else None
 
     def nearest(self, point: Point, count: int, max_rings: int = 40) -> List[Tuple[float, int]]:
         if self.empty:
             return []
+        if self.few is not None:
+            return sorted((dist(point, self.points[index]), index) for index in self.few)[:count]
         cx, cy = int(point[0] // self.size), int(point[1] // self.size)
         found: List[Tuple[float, int]] = []
         for ring in range(max_rings + 1):
-            for gx in range(cx - ring, cx + ring + 1):
-                for gy in range(cy - ring, cy + ring + 1):
-                    if max(abs(gx - cx), abs(gy - cy)) != ring:
-                        continue
-                    for index in self.buckets.get((gx, gy), ()):
-                        found.append((dist(point, self.points[index]), index))
+            for key in self._ring(cx, cy, ring):
+                for index in self.buckets.get(key, ()):
+                    found.append((dist(point, self.points[index]), index))
             found.sort()
             # Every station closer than `ring * size` is already found.
             if len(found) >= count and found[count - 1][0] <= ring * self.size:
                 break
         return found[:count]
+
+    @staticmethod
+    def _ring(cx: int, cy: int, ring: int):
+        """Buckets at exactly `ring` steps from (cx, cy): the border of the square, not its inside."""
+        if ring == 0:
+            yield cx, cy
+            return
+        for gx in range(cx - ring, cx + ring + 1):
+            yield gx, cy - ring
+            yield gx, cy + ring
+        for gy in range(cy - ring + 1, cy + ring):
+            yield cx - ring, gy
+            yield cx + ring, gy
 
     def within(self, point: Point, radius: float) -> List[int]:
         reach = int(radius // self.size) + 1
@@ -286,6 +302,16 @@ class Rivers:
                 for key in self._keys(a, b):
                     self.buckets[key].append((a, b))
         self.bridges = list(bridges)
+        # Each bridge end, filed by square of MAX_BRIDGE_WALK_METERS: a detour longer than that is never taken, so
+        # only the ends in the 3 x 3 squares around the start can be the near end.
+        self.bridge_ends: Dict[Tuple[int, int], List[Tuple[Point, Point, float]]] = defaultdict(list)
+        for end_a, end_b, length in self.bridges:
+            for near, far in ((end_a, end_b), (end_b, end_a)):
+                self.bridge_ends[self._square(near)].append((near, far, length))
+
+    @staticmethod
+    def _square(point: Point) -> Tuple[int, int]:
+        return int(point[0] // MAX_BRIDGE_WALK_METERS), int(point[1] // MAX_BRIDGE_WALK_METERS)
 
     @staticmethod
     def _keys(a: Point, b: Point):
@@ -307,15 +333,18 @@ class Rivers:
         """Walking distance in meters: straight, or through a bridge; infinite without one."""
         if not self.crosses(a, b):
             return dist(a, b)
-        # Shortest detour first: the first bridge whose two legs stay on their bank is the best one.
-        detours = sorted(
-            (dist(a, near) + length + dist(far, b), near, far)
-            for end_a, end_b, length in self.bridges
-            for near, far in ((end_a, end_b), (end_b, end_a))
-        )
+        # Shortest detour first: the first bridge whose two legs stay on their bank is the best one. Detours longer
+        # than the limit are dropped before sorting (most bridges are far away).
+        detours = []
+        sx, sy = self._square(a)
+        for gx in (sx - 1, sx, sx + 1):
+            for gy in (sy - 1, sy, sy + 1):
+                for near, far, length in self.bridge_ends.get((gx, gy), ()):
+                    meters = dist(a, near) + length + dist(far, b)
+                    if meters <= MAX_BRIDGE_WALK_METERS:
+                        detours.append((meters, near, far))
+        detours.sort()
         for meters, near, far in detours:
-            if meters > MAX_BRIDGE_WALK_METERS:
-                break
             if not self.crosses(a, near) and not self.crosses(far, b):
                 return meters
         return math.inf
@@ -1330,7 +1359,7 @@ def main() -> None:
             "id": station["id"],
             "name": station["name"],
             "point": station["point"],
-            "routes": sorted(station["routes"], key=lambda r: (len(route_info[r]["name"]), route_info[r]["name"])),
+            "routes": sorted(station["routes"], key=lambda r: (len(route_info[r]["name"]), route_info[r]["name"], r)),
             "rail": any(route_info[route_id]["rail"] for route_id in station["routes"]),
         }
         for station in complexes
