@@ -356,3 +356,17 @@ est un paramètre d'URL (`ambiance=nuit`), pas une conséquence de `prefers-colo
 - **À éviter** : carte de chaleur en lueur, post-traitement plein écran, tubes 3D pour les lignes, boucle de rendu
   permanente, nuit automatique.
 
+### Bâtiments du geoportail (R17.10, étude du 2026-11-11)
+
+- Jeu : `https://acts3.geoportail.lu/3d-data/3d-tiles/ACT2023_v2_buildings/tileset.json`, 3D Tiles 1.0, racine en
+  `region` (radians), raffinement `REPLACE`, sous-tilesets par dalle (`11/x/y.json`) puis tuiles `b3dm` aux niveaux
+  15 à 17 (erreur géométrique 6 m, 3 m, 0).
+- Une tuile `b3dm` contient du glTF binaire simple : ni `extensionsUsed` ni `extensionsRequired` (pas de Draco ni de
+  KTX2, donc ni worker ni WASM), une texture intégrée, `RTC_CENTER` en coordonnées ECEF.
+- CORS : la réponse autorise l'origine `https://tram.monbot.si`. Aucune licence affichée sur le service ; la source
+  (bâtiments 3D de l'ACT) est publiée en CC0.
+- Pour l'intégrer : CSP de `/3d/*` élargie (`connect-src https://acts3.geoportail.lu`, et `img-src blob:` pour les
+  textures décodées par `GLTFLoader`), chargeur maison des tuiles visibles sous 2,5 km de caméra au niveau 15,
+  conversion des sommets ECEF vers latitude et longitude puis vers les mètres du site, volumes unis sans texture.
+  Estimation : une à deux journées, à décider par l'owner.
+
