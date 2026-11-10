@@ -29,12 +29,16 @@ Minutes porte à porte, fenêtre 8 h 00 - 8 h 30. L'écart est carte moins réf�
 plus pessimiste. « Avant » est le modèle de l'original (moitié de l'intervalle par ligne), « après » le modèle
 actuel (attentes tirées de l'horaire, voir plus bas).
 
+Depuis novembre 2026, `compare_trips.mjs` utilise le solveur du site (`site/solver.mjs`) : ponts compris, et
+descente possible à n'importe quel arrêt, plus seulement aux 8 plus proches de l'arrivée. Philharmonie - Belair
+passe ainsi de 23 à 17 min (T1 jusqu'à l'Étoile puis 580 m à pied), ce que la carte affichait déjà.
+
 | Trajet | mobiliteit.lu | Google | Carte avant | Carte après |
 |---|---:|---:|---:|---:|
 | Gare Centrale - Kirchberg, Luxexpo | 22 | 26 | 26 | 26 |
 | Gare Centrale - Hamilius | 8 | 10 | 8 | 8 |
 | Gare Centrale - Gasperich, Cloche d'Or | 17 | 17 | 18 | 18 |
-| Kirchberg, Philharmonie - Belair, Sacré-Coeur | 20 | 22 | 26 | 23 |
+| Kirchberg, Philharmonie - Belair, Sacré-Coeur | 20 | 22 | 26 | 17 |
 | Gare Centrale - Esch-sur-Alzette | 33 | 35 | 35 | 36 |
 | Gare Centrale - Mersch | 25 | 28 | 29 | 26 |
 | Gare Centrale - Ettelbruck | 39 | 43 | 40 | 44 |
@@ -48,8 +52,8 @@ actuel (attentes tirées de l'horaire, voir plus bas).
 
 | Référence | Avant : écart moyen | Avant : écart absolu | Après : écart moyen | Après : écart absolu |
 |---|---:|---:|---:|---:|
-| mobiliteit.lu | +4,8 min | 6,1 min | +2,6 min | 3,3 min |
-| Google Maps | +1,4 min | 4,9 min | -0,8 min | 3,5 min |
+| mobiliteit.lu | +4,8 min | 6,1 min | +2,2 min | 3,4 min |
+| Google Maps | +1,4 min | 4,9 min | -1,2 min | 3,8 min |
 
 ## Ce qui a changé dans le modèle
 

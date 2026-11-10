@@ -179,7 +179,7 @@ exception. Le texte des badges est noir ou blanc selon le contraste WCAG.
   une attente de 99 min pour ne jamais servir de départ.
 - Élagage des correspondances à pied : pas de marche vers un arrêt voisin pour une ligne qui passe déjà là, ni
   depuis une ligne qui dessert aussi l'arrêt voisin.
-- Résultat sur le banc d'essai (`docs/benchmark/`) : écart absolu moyen de 6,1 à 3,3 min avec mobiliteit.lu.
+- Résultat sur le banc d'essai (`docs/benchmark/`) : écart absolu moyen de 6,1 à 3,4 min avec mobiliteit.lu.
 - `extra_links(config, complexes)` : chaque lien crée une ligne synthétique à deux arrêts, avec deux arêtes
   de trajet (aller et retour) et une attente `clamp(headway/2)`.
 - `MAX_WAIT` est lu depuis `config.maxWait`, `GRID_CELL_METERS` depuis `config.gridCellMeters`.
@@ -229,7 +229,9 @@ Les deux cartes ont été fusionnées à la demande de l'owner : une Carte pays 
   (cours d'eau), Sûre, Moselle. `cities/luxembourg-ville.json` est supprimé.
 - **Format compact** de `site/data/luxembourg.json` (`meta.format = 2`), décodé au chargement par
   `site/data-format.mjs` (`decode(data)`) dans la forme historique ; le reste de `app.js` et les outils
-  (`tools/*.mjs`) restent inchangés :
+  (`tools/*.mjs`) restent inchangés. Le calcul des trajets (marche avec ponts, plus courts chemins, meilleur arrêt
+  d'arrivée) est dans `site/solver.mjs` (`createModel(data)`), importé par `app.js` et par les deux outils de
+  contrôle, qui testent donc le code livré :
   - `routeStates` : `{"station": [...], "route": [indice dans "routeIds"], "wait": [...], "access": [...]}`
     et `routeIds` ;
   - `adjacency` : par état, une liste plate `[dst, poids, dst, poids, ...]` ;

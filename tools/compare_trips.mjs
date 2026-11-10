@@ -1,5 +1,6 @@
 import fs from "fs";
 import { decode } from "../site/data-format.mjs";
+import { createModel } from "../site/solver.mjs";
 // Comparaison des temps du modèle avec des calculateurs d'itinéraire (mobiliteit.lu, Google Maps).
 // Usage : node tools/compare_trips.mjs [carte]   (carte par défaut : luxembourg)
 //
@@ -12,43 +13,17 @@ const d = decode(JSON.parse(fs.readFileSync(`site/data/${slug}.json`)));
 const bench = JSON.parse(fs.readFileSync("docs/benchmark/trips.json"));
 const refs = fs.existsSync("docs/benchmark/references.json") ? JSON.parse(fs.readFileSync("docs/benchmark/references.json")) : {};
 const rs = d.routeStates, st = d.stations, ri = d.routeInfo;
-const W = d.meta.walkMetersPerMinute, N = d.meta.originStationCount;
-const hyp = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const m = 111320, toW = (lat, lon) => [lon * m * Math.cos(d.meta.lat0 * Math.PI / 180), lat * m];
 
-// Même modèle que site/app.js (bus compris), sans le détour par les ponts : les trajets du banc partent d'un arrêt.
-function solve(origin, bus = true) {
-  const usable = (k) => bus || ri[rs[k].routeId].rail;
-  const dist = new Float64Array(rs.length).fill(Infinity), prev = new Int32Array(rs.length).fill(-1);
-  const seeds = st.map((s, i) => [hyp(origin, s.point) / W, i]).sort((a, b) => a[0] - b[0]).slice(0, N);
-  for (const [walk, i] of seeds) for (const k of d.stationStates[i]) if (usable(k)) dist[k] = Math.min(dist[k], walk + rs[k].access + rs[k].wait);
-  const done = new Uint8Array(rs.length);
-  // Tas binaire minimal : 16 000 états sur la carte du pays.
-  const heap = [];
-  const push = (v, k) => { heap.push([v, k]); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
-  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l][0] < heap[s][0]) s = l; if (r < heap.length && heap[r][0] < heap[s][0]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } } return top; };
-  dist.forEach((v, k) => { if (isFinite(v)) push(v, k); });
-  while (heap.length) {
-    const [v, u] = pop();
-    if (done[u] || v > dist[u]) continue;
-    done[u] = 1;
-    for (const [t, w] of d.adjacency[u]) if (usable(t) && v + w < dist[t]) { dist[t] = v + w; prev[t] = u; push(dist[t], t); }
-  }
-  return { dist, prev };
-}
-
+// Le solveur du site (site/solver.mjs), bus compris, ponts compris.
+const model = createModel(d);
 function travel(from, to, bus = true) {
   const origin = toW(from.lat, from.lon), target = toW(to.lat, to.lon);
-  const { dist, prev } = solve(origin, bus);
-  let best = hyp(origin, target) / W, bestState = -1;
-  const near = st.map((s, i) => [hyp(target, s.point), i]).sort((a, b) => a[0] - b[0]).slice(0, N);
-  for (const [meters, i] of near) for (const k of d.stationStates[i]) {
-    const t = dist[k] + rs[k].access + meters / W;
-    if (t < best) { best = t; bestState = k; }
-  }
+  const solution = model.solveFrom(origin, { includeBus: bus });
+  const best = model.travelTo(solution, target);
   const lines = [];
-  for (let k = bestState; k !== -1; k = prev[k]) { const name = ri[rs[k].routeId].name; if (lines[0] !== name) lines.unshift(name); }
-  return { minutes: best, lines: lines.length ? lines.join(">") : "à pied" };
+  if (best.station !== -1) for (const k of model.chainTo(solution, best.station)) { const name = ri[rs[k].routeId].name; if (lines.at(-1) !== name) lines.push(name); }
+  return { minutes: best.minutes, lines: lines.length ? lines.join(">") : "à pied" };
 }
 
 const minutes = (hhmm) => { const [h, mm] = hhmm.split(":").map(Number); return h * 60 + mm; };

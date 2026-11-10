@@ -1,5 +1,6 @@
 import fs from "fs";
 import { decode } from "../site/data-format.mjs";
+import { createModel } from "../site/solver.mjs";
 // Sondage des trajets : temps depuis le centre jusqu'aux terminus et aux gares, avec la vitesse porte à porte.
 // Usage : node tools/check_trips.mjs <carte>
 // Une vitesse anormale est signalée par "!" ; les trajets de référence ("checks" de la config) hors fourchette
@@ -10,18 +11,14 @@ const city = JSON.parse(fs.readFileSync(`cities/${slug}.json`));
 const rs = d.routeStates, st = d.stations, ri = d.routeInfo, rail = (r) => ri[r].rail;
 // Vitesse maximale crédible porte à porte, selon le mode le plus rapide emprunté.
 const MAX_KMH = { train: 90, tram: 35, funicular: 35, metro: 35 };
-const W = d.meta.walkMetersPerMinute, hyp = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const hyp = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const m = 111320, toW = (lat, lon) => [lon * m * Math.cos(d.meta.lat0 * Math.PI / 180), lat * m];
 const origin = toW(city.defaultFrom.lat, city.defaultFrom.lon);
-// Même modèle que site/app.js : marche vers les stations les plus proches, puis réseau ferré seulement.
-const dist = new Array(rs.length).fill(Infinity), prev = new Array(rs.length).fill(-1);
-const seeds = st.map((s, i) => ({ i, w: hyp(origin, s.point) / W })).filter((x) => st[x.i].rail).sort((a, b) => a.w - b.w).slice(0, d.meta.originStationCount);
-for (const s of seeds) for (const k of d.stationStates[s.i]) if (rail(rs[k].routeId)) dist[k] = Math.min(dist[k], s.w + rs[k].access + rs[k].wait);
-const done = []; for (;;) { let u = -1, b = Infinity; for (let i = 0; i < rs.length; i++) if (!done[i] && dist[i] < b) { b = dist[i]; u = i; } if (u < 0) break; done[u] = 1;
-  for (const [v, w] of d.adjacency[u]) if (rail(rs[v].routeId) && dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; } }
-const out = new Array(st.length).fill(Infinity), best = new Array(st.length).fill(-1);
-rs.forEach((r, k) => { const o = dist[k] + r.access; if (o < out[r.stationIndex]) { out[r.stationIndex] = o; best[r.stationIndex] = k; } });
-const pathOf = (i) => { const lines = [], modes = new Set(); for (let k = best[i]; k !== -1; k = prev[k]) { const info = ri[rs[k].routeId]; modes.add(info.mode); if (lines[0] !== info.name) lines.unshift(info.name); } return { lines, modes }; };
+// Le solveur du site (site/solver.mjs), réseau ferré seulement.
+const model = createModel(d);
+const sol = model.solveFrom(origin, { includeBus: false });
+const out = sol.stationTime;
+const pathOf = (i) => { const lines = [], modes = new Set(); for (const k of model.chainTo(sol, i)) { const info = ri[rs[k].routeId]; modes.add(info.mode); if (lines.at(-1) !== info.name) lines.push(info.name); } return { lines, modes }; };
 // Cibles : terminus de chaque ligne ferrée (stations les plus éloignées) et stations nommées "Gare".
 const targets = new Map();
 for (const [id, info] of Object.entries(ri)) { if (!info.rail) continue;
