@@ -308,7 +308,8 @@ du relief habillé (jour) et de la maquette de nuit.
 - **Code partagé** : `site/map-core.mjs` (grille, image de la carte de chaleur, isochrones, itinéraire,
   géographie), déplacé tel quel de `app.js`. `tools/check_grid.mjs` donne une empreinte de la grille, de l'image
   et des isochrones pour 4 départs ; elle est identique avant et après le déplacement.
-- **Relief** : `build_terrain.py` lit le MNT LiDAR 2024 (COG de 40 Go, EPSG:2169) par requêtes partielles avec
+- **Relief** (exception à R1.6, étape à part : `build.py` ne l'appelle pas et le build 2D reste en Python
+  standard ; les grilles produites sont versionnées) : `build_terrain.py` lit le MNT LiDAR 2024 (COG de 40 Go, EPSG:2169) par requêtes partielles avec
   GDAL (`gdalwarp` sur `/vsicurl`, dans l'image `ghcr.io/osgeo/gdal` lancée par Podman : les DLL de GDAL sont
   bloquées par la stratégie de contrôle des applications de Windows). La grille de sortie est en EPSG:4326 alignée
   sur les mètres du site (x et y sont proportionnels à la longitude et à la latitude), donc sans reprojection

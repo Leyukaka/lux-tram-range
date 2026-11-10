@@ -44,7 +44,9 @@ afin de reconstruire le site quand l'ATP publie un nouveau GTFS.
    SHA-256 dans `data/<slug>/manifest.json`.
 5. SI un téléchargement échoue après les tentatives prévues, ALORS le Pipeline DOIT s'arrêter avec un
    message qui nomme la source en échec.
-6. Le Pipeline DOIT fonctionner avec la seule bibliothèque standard de Python.
+6. Le Pipeline DOIT fonctionner avec la seule bibliothèque standard de Python. Seul le relief de la vue 3D
+   (`build_terrain.py`, R17.2) fait exception : étape à part, lancée à la main, qui demande GDAL (image
+   `ghcr.io/osgeo/gdal` épinglée) ; son résultat est versionné et `build.py` ne l'appelle pas.
 
 ### R2 : Jour et fenêtre de référence
 

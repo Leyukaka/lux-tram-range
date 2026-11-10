@@ -108,10 +108,6 @@ function walkMinutes(meters) {
   return app.model.walkMinutes(meters);
 }
 
-function walkMeters(a, b) {
-  return app.model.walkMeters(a, b);
-}
-
 function solveFrom(point) {
   return app.model.solveFrom(point, { includeBus: app.includeBus });
 }
