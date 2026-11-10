@@ -321,9 +321,14 @@ du relief habillé (jour) et de la maquette de nuit.
 - **Lignes** : `site/data/luxembourg-lines.json`, à part du fichier principal (R4.2 inchangé) : forme la plus
   fréquente par ligne AVL (agence 6, lignes de jour 2 à 33 et CN1 à CN8) et T1, simplifiée à 25 m.
 - **Page** : `templates/3d.html`, `site/app3d.js`, pages générées par `build_pages.py`.
-- **Maillage** : pas un sommet par échantillon. Le relief est envoyé au GPU en texture de hauteur ; maillage du pays
-  en treillis de 200 m (environ 300 x 420 sommets), de la ville en 20 m sur ordinateur et 40 m sur mobile, déplacés
-  dans le vertex shader ; normales tirées de la texture.
+- **Maillage** (fait) : maillages calculés sur le processeur, pays à 250 m (400 m sur mobile), ville à 30 m (50 m),
+  environ 384 000 triangles sur ordinateur et 143 000 sur mobile. Sous l'emprise de la ville, le maillage du pays
+  descend de 150 m pour ne pas percer le maillage fin. Textures : pays 3072 px (2048 sur mobile), ville 2048 px.
+  Lignes : variantes de trains sur les mêmes voies dédoublonnées, tracés densifiés à 60 m en ville et 180 m ailleurs.
+- **Suite proposée par la revue Fable** (non faite) : ombrage LiDAR cuit dans la texture et matériau non éclairé ;
+  carte de chaleur en petite texture et isochrones dans le shader (2 px à l'écran, glisser sans renvoi de grandes
+  textures) ; lignes fusionnées par type et CN en pointillé ; légende des lignes dans la scène et pastilles qui isolent
+  une ligne ; glisser de l'arrivée ; hauteur des lignes et pointage sur le maillage réel hors de la ville.
 - **Cache** : `/*` en `no-cache` (revalidation par ETag) pour qu'une page, son script et les modules importés
   soient toujours de la même version ; `/data/*` et `/vendor/*` en cache immuable, avec `?v=` dans l'URL des données.
 - **Trains** : tracés de `routes` du fichier principal (GTFS `shapes.txt`, `railGeometry` vaut `gtfs`).
@@ -344,8 +349,8 @@ est un paramètre d'URL (`ambiance=nuit`), pas une conséquence de `prefers-colo
   (`#1565C0`, `#EF6C00`, `#00838F`, `#C62828`, `#2E7D32`, `#AD1457`, `#283593`, `#F9A825`, `#00897B`, `#6D4C41`,
   `#D81B60`, `#558B2F`), éclaircies de 35 % la nuit ; le liseré porte le contraste. Rubans au-dessus du relief
   lissé par maximum glissant sur 600 m le long du tracé (300 m de chaque côté), pour enjamber l'Alzette et la
-  Pétrusse ; contrôle sur le pont Grande-Duchesse Charlotte (T1), le Pont Rouge et le viaduc de Pulvermühle. Nuit : second passage additif,
-  trois fois plus large, opacité 0,22, en guise de lueur, sans bloom.
+  Pétrusse ; contrôle sur le pont Grande-Duchesse Charlotte (T1), le Pont Rouge et le viaduc de Pulvermühle. Nuit : second passage trois fois plus
+  large, opacité 0,18, en mélange normal (l'additif saturait en blanc), en guise de lueur, sans bloom.
 - **Relief et caméra** : exagération verticale de 1,5 en vue proche à 2,5 en vue lointaine, affichée dans la
   légende. Vue de dessus, nord en haut. Inclinaison et distance bornées. Soleil au nord-ouest, pas d'ombres
   portées. Brouillard lié à la distance de la caméra.

@@ -166,8 +166,12 @@ relief.add(lineGroup, routeGroup);
 
 const toScene = (x, y, h) => new THREE.Vector3(x - origin[0], h - BASE_HEIGHT, -(y - origin[1]));
 
-function buildSurface(bounds, cols, rows) {
+function buildSurface(bounds, cols, rows, under = null) {
   const [left, bottom, right, top] = bounds;
+  // Sous l'emprise de la ville (rétrécie d'une maille), le maillage grossier du pays passe 150 m plus bas : sinon ses
+  // facettes percent le maillage fin dans les vallées.
+  const margin = Math.max((right - left) / (cols - 1), (top - bottom) / (rows - 1));
+  const hidden = (x, y) => under && x > under[0] + margin && x < under[2] - margin && y > under[1] + margin && y < under[3] - margin;
   const positions = new Float32Array(cols * rows * 3);
   const uvs = new Float32Array(cols * rows * 2);
   for (let r = 0; r < rows; r += 1) {
@@ -175,7 +179,7 @@ function buildSurface(bounds, cols, rows) {
       const x = left + ((right - left) * c) / (cols - 1);
       const y = bottom + ((top - bottom) * r) / (rows - 1);
       const i = r * cols + c;
-      const p = toScene(x, y, groundHeight(x, y));
+      const p = toScene(x, y, groundHeight(x, y) - (hidden(x, y) ? 150 : 0));
       positions.set([p.x, p.y, p.z], i * 3);
       uvs.set([c / (cols - 1), r / (rows - 1)], i * 2);
     }
@@ -197,7 +201,7 @@ function buildSurface(bounds, cols, rows) {
   return geometry;
 }
 
-function addSurface(bounds, step, maxTexture, behind) {
+function addSurface(bounds, step, maxTexture, behind, under = null) {
   const cols = Math.round((bounds[2] - bounds[0]) / step) + 1;
   const rows = Math.round((bounds[3] - bounds[1]) / step) + 1;
   const textureCanvas = document.createElement("canvas");
@@ -209,7 +213,7 @@ function addSurface(bounds, step, maxTexture, behind) {
   texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const material = new THREE.MeshLambertMaterial({ map: texture });
   if (behind) Object.assign(material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
-  const mesh = new THREE.Mesh(buildSurface(bounds, cols, rows), material);
+  const mesh = new THREE.Mesh(buildSurface(bounds, cols, rows, under), material);
   relief.add(mesh);
   const surface = { bounds, mesh, canvas: textureCanvas, base: document.createElement("canvas"), texture };
   surfaces.push(surface);
@@ -269,7 +273,8 @@ function paintSurfaces({ fast = false } = {}) {
   const [mx, my, mx2, my2] = app.data.meta.bounds;
   const colors = palette();
   const contours = fast ? [] : app.isochrones.map((minutes) => core.contourSegments(app.data.meta.bounds, app.grid, minutes));
-  for (const surface of surfaces) {
+  // Pendant un glisser, seule la texture de la ville (la plus petite, au premier plan) est repeinte.
+  for (const surface of fast ? surfaces.slice(1) : surfaces) {
     const ctx = surface.canvas.getContext("2d");
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(surface.base, 0, 0);
@@ -370,10 +375,15 @@ function addLine(group, positions, color, width, { halo = true, glow = false, or
 }
 
 /** Tracés en coordonnées de scène, calculés une fois (le relief ne change pas). */
+function inCity([x, y]) {
+  const [left, bottom, right, top] = app.terrain.city.bounds;
+  return x >= left && x <= right && y >= bottom && y <= top;
+}
+
 function prepareLines() {
   const shapes = [];
   const toPositions = (points) => {
-    const dense = densify(points, 60);
+    const dense = densify(points, 60).filter((point, i, all) => i === 0 || i === all.length - 1 || inCity(point) || i % 3 === 0);
     const heights = lineHeights(dense);
     const positions = [];
     dense.forEach(([x, y], i) => {
@@ -382,10 +392,21 @@ function prepareLines() {
     });
     return { dense, positions };
   };
-  for (const route of app.data.routes) {
+  // Les variantes de trains (par terminus) roulent souvent sur les mêmes voies : une variante dont 90 % du tracé
+  // passe dans des cases de 60 m déjà couvertes n'est pas redessinée (moins de triangles, pas de scintillement).
+  const covered = new Set();
+  const cellOf = ([x, y]) => `${Math.floor(x / 60)},${Math.floor(y / 60)}`;
+  const routes = [...app.data.routes].sort((a, b) => b.points.length - a.points.length);
+  for (const route of routes) {
     const info = app.data.routeInfo[route.id];
     if (!info) continue;
-    shapes.push({ kind: info.mode === "train" ? "train" : "tram", name: info.name, routeId: route.id, color: info.color, ...toPositions(route.points) });
+    const kind = info.mode === "train" ? "train" : "tram";
+    if (kind === "train") {
+      const dense = densify(route.points, 30);
+      if (dense.filter((point) => covered.has(cellOf(point))).length >= dense.length * 0.9) continue;
+      for (const point of dense) covered.add(cellOf(point));
+    }
+    shapes.push({ kind, name: info.name, routeId: route.id, color: info.color, ...toPositions(route.points) });
   }
   for (const line of app.lines.lines) {
     const number = parseInt(line.name.replace(/\D/g, ""), 10) || 0;
@@ -406,6 +427,7 @@ function prepareLines() {
   // Intervalle des lignes ferrées : deux fois l'attente moyenne au départ (horaire réel du graphe).
   const waits = new Map();
   app.data.routeStates.forEach((state) => {
+    if (state.wait >= 99) return; // état de descente (ALIGHT_WAIT de build_data.py), pas une attente
     if (!waits.has(state.routeId)) waits.set(state.routeId, []);
     waits.get(state.routeId).push(state.wait);
   });
@@ -531,7 +553,7 @@ function label(key, text, color) {
 
 function placeLabels() {
   const marks = [["from", app.from, t("departure"), palette().from]];
-  if (app.to && app.solution) marks.push(["to", app.to, `${t("arrival")} · ${formatMinutes(core.buildItinerary(app.model, app.data, app.solution, app.to.point, t).minutes)}`, palette().to]);
+  if (app.to && Number.isFinite(app.toMinutes)) marks.push(["to", app.to, `${t("arrival")} · ${formatMinutes(app.toMinutes)}`, palette().to]);
   for (const key of ["from", "to"]) if (labels[key]) labels[key].hidden = true;
   for (const [key, mark, text, color] of marks) {
     if (!mark) continue;
@@ -613,6 +635,7 @@ function updatePanel() {
     $("tripHint").hidden = false;
   } else {
     const itinerary = core.buildItinerary(app.model, app.data, app.solution, app.to.point, t);
+    app.toMinutes = itinerary.minutes;
     result.hidden = false;
     $("tripHint").hidden = true;
     $("tripTo").textContent = app.to.label;
@@ -753,6 +776,14 @@ function followCamera() {
   const distance = viewDistance();
   const exaggeration = 1.5 + smoothstep(3000, 12000, distance);
   relief.scale.y = exaggeration;
+  const ground = (groundHeight(controls.target.x + origin[0], -controls.target.z + origin[1]) - BASE_HEIGHT) * exaggeration;
+  const lift = ground - controls.target.y;
+  if (Math.abs(lift) > 1) {
+    controls.target.y += lift;
+    camera.position.y += lift;
+  }
+  const below = (groundHeight(camera.position.x + origin[0], -camera.position.z + origin[1]) - BASE_HEIGHT) * exaggeration + 30 - camera.position.y;
+  if (below > 0) camera.position.y += below;
   $("exaggeration").textContent = t("relief_exaggeration", {n: decimal.format(exaggeration)});
   const top = camera.position.y > 0 && Math.abs(camera.position.x - controls.target.x) + Math.abs(camera.position.z - controls.target.z) < distance * 0.05;
   scene.fog.near = top ? 1e9 : distance * 2.5;
@@ -791,7 +822,7 @@ function requestRender() {
 }
 
 function updateLoop() {
-  const wanted = Boolean(vehicles) && !document.hidden && renderer;
+  const wanted = Boolean(vehicles && renderer) && !document.hidden;
   if (wanted === looping) return;
   looping = wanted;
   let last = 0;
@@ -918,6 +949,7 @@ canvas.addEventListener("pointerup", (event) => {
 // --- Commandes --------------------------------------------------------------------------
 
 $("busToggle").addEventListener("change", (event) => {
+  if (!app.data) return;
   app.includeBus = event.target.checked;
   drawLines();
   recompute();
@@ -925,18 +957,21 @@ $("busToggle").addEventListener("change", (event) => {
 });
 
 $("nightLinesToggle").addEventListener("change", (event) => {
+  if (!app.data) return;
   app.showNightLines = event.target.checked;
   drawLines();
   syncUrl();
 });
 
 $("vehiclesToggle").addEventListener("change", (event) => {
+  if (!app.data) return;
   app.showVehicles = event.target.checked;
   buildVehicles();
   requestRender();
 });
 
 $("isoToggles").addEventListener("change", () => {
+  if (!app.data) return;
   app.autoScale = false;
   app.isochrones = [...$("isoToggles").querySelectorAll("input:checked")].map((input) => Number(input.value));
   paintSurfaces();
@@ -944,6 +979,7 @@ $("isoToggles").addEventListener("change", () => {
 });
 
 $("maxRange").addEventListener("input", (event) => {
+  if (!app.data) return;
   app.autoScale = false;
   app.maxMinutes = Number(event.target.value);
   updateLegend();
@@ -952,6 +988,7 @@ $("maxRange").addEventListener("input", (event) => {
 });
 
 $("ambiance").addEventListener("click", (event) => {
+  if (!app.data) return;
   const value = event.target.closest("button")?.dataset.ambiance;
   if (value && (value === "nuit") !== app.night) setAmbiance(value === "nuit");
 });
@@ -966,6 +1003,7 @@ $("removeTo").addEventListener("click", () => {
 });
 
 $("heatFrom").addEventListener("click", (event) => {
+  if (!app.data) return;
   const source = event.target.closest("button")?.dataset.source;
   if (source && source !== app.heatFrom) {
     setHeatFrom(source);
@@ -974,6 +1012,7 @@ $("heatFrom").addEventListener("click", (event) => {
 });
 
 $("topView").addEventListener("click", () => {
+  if (!app.data) return;
   const distance = viewDistance();
   camera.position.set(controls.target.x, controls.target.y + distance, controls.target.z + 0.001);
   camera.up.set(0, 1, 0);
@@ -1158,7 +1197,7 @@ function cityLineChips() {
 }
 
 async function init() {
-  if (!canvas.getContext("webgl2")) {
+  if (!document.createElement("canvas").getContext("webgl2")) {
     fail(t("webgl_missing"));
     return;
   }
@@ -1192,7 +1231,7 @@ async function init() {
 
   // Textures : pays à environ 25 m par pixel, ville à 5 m (10 m sur mobile).
   const maxTexture = Math.min(renderer.capabilities.maxTextureSize, MOBILE ? 2048 : 3072);
-  addSurface(app.data.meta.bounds, MOBILE ? 400 : 250, maxTexture, true);
+  addSurface(app.data.meta.bounds, MOBILE ? 400 : 250, maxTexture, true, app.terrain.city.bounds);
   addSurface(app.terrain.city.bounds, MOBILE ? 50 : 30, Math.min(maxTexture, 2048), false);
 
   controls = new OrbitControls(camera, canvas);
@@ -1224,4 +1263,5 @@ init().catch((error) => {
   console.error(error);
   $("tripFrom").textContent = t("load_error");
   $("tripHint").textContent = t("load_retry");
+  fail(`${t("load_error")} ${t("load_retry")}`);
 });
