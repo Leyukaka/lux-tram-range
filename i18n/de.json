@@ -134,5 +134,11 @@
   "open_2d": "2D-Karte öffnen",
   "loading_relief": "Relief wird geladen...",
   "city_lines": "Buslinien der Stadt",
-  "step_3d": "Klicken Sie auf das Relief für das Ziel, ziehen Sie den grünen Punkt für einen anderen Start. Anderswo ziehen dreht die Ansicht."
+  "step_3d": "Klicken Sie auf das Relief für das Ziel, ziehen Sie den grünen Punkt für einen anderen Start. Anderswo ziehen dreht die Ansicht.",
+  "show_label": "Anzeigen",
+  "heat_layer": "Fahrzeiten",
+  "bus_lines": "Buslinien",
+  "relief_label": "Relief",
+  "relief_auto": "Auto",
+  "help_3d": "Klick: Ziel · grünen Punkt ziehen: Start · ziehen: verschieben · Rechtsklick oder zwei Finger: drehen · Mausrad oder Zoomgeste: zoomen"
 }

@@ -8,7 +8,6 @@
           <ul id="searchResults" class="search-results" hidden></ul>
           <p id="searchStatus" class="trip-hint" role="status" aria-live="polite"></p>
         </form>
-        <p class="steps-3d">${step_3d}</p>
       </section>
 
       <section id="mapCard" class="map-card" aria-label="${map_label}" aria-busy="true">
@@ -46,6 +45,7 @@
           </aside>
 
           <div id="toast" class="toast" role="status" hidden></div>
+          <p class="help-3d">${help_3d}</p>
 
           <div class="map-buttons">
             <button id="topView" type="button" class="icon-button" aria-label="${top_view}" title="${top_view}">⊙</button>
@@ -64,8 +64,20 @@
             <span class="control-label">${network_label}</span>
             <label class="pill-toggle"><input type="checkbox" checked disabled /> ${rail_label}</label>
             <label class="pill-toggle"><input id="busToggle" type="checkbox" checked /> ${mode_bus}</label>
+          </div>
+          <div class="control-group">
+            <span class="control-label">${show_label}</span>
+            <label class="pill-toggle"><input id="heatToggle" type="checkbox" checked /> ${heat_layer}</label>
+            <label class="pill-toggle"><input id="busLinesToggle" type="checkbox" checked /> ${bus_lines}</label>
             <label class="pill-toggle"><input id="nightLinesToggle" type="checkbox" /> ${night_lines}</label>
             <label class="pill-toggle"><input id="vehiclesToggle" type="checkbox" checked /> ${vehicles}</label>
+            <label class="control-label" for="reliefSelect">${relief_label}</label>
+            <select id="reliefSelect">
+              <option value="auto" selected>${relief_auto}</option>
+              <option value="1">× 1</option>
+              <option value="2">× 2</option>
+              <option value="3">× 3</option>
+            </select>
           </div>
           <div id="isoToggles" class="control-group">
             <span class="control-label">${isochrones}</span>

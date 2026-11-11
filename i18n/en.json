@@ -134,5 +134,11 @@
   "open_2d": "Open the 2D map",
   "loading_relief": "Loading the relief...",
   "city_lines": "City bus lines",
-  "step_3d": "Click on the relief to set the arrival, drag the green point to change the departure. Dragging elsewhere turns the view."
+  "step_3d": "Click on the relief to set the arrival, drag the green point to change the departure. Dragging elsewhere turns the view.",
+  "show_label": "Show",
+  "heat_layer": "Travel times",
+  "bus_lines": "Bus lines",
+  "relief_label": "Relief",
+  "relief_auto": "Auto",
+  "help_3d": "Click: arrival · drag the green point: departure · drag: move · right click or two fingers: turn · wheel or pinch: zoom"
 }

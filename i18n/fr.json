@@ -134,5 +134,11 @@
   "open_2d": "Ouvrir la carte 2D",
   "loading_relief": "Chargement du relief...",
   "city_lines": "Lignes de la Ville",
-  "step_3d": "Cliquez sur le relief pour poser l'arrivée, glissez le point vert pour changer de départ. Glisser ailleurs fait tourner la vue."
+  "step_3d": "Cliquez sur le relief pour poser l'arrivée, glissez le point vert pour changer de départ. Glisser ailleurs fait tourner la vue.",
+  "show_label": "Afficher",
+  "heat_layer": "Temps de trajet",
+  "bus_lines": "Lignes de bus",
+  "relief_label": "Relief",
+  "relief_auto": "Auto",
+  "help_3d": "Clic : arrivée · glisser le point vert : départ · glisser : déplacer · clic droit ou deux doigts : tourner · molette ou pincer : zoomer"
 }

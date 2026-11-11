@@ -32,8 +32,8 @@ const MOBILE = matchMedia("(pointer: coarse)").matches || Math.min(screen.width,
 const MAX_VEHICLES = MOBILE ? 120 : 300;
 
 const COLORS = {
-  day: { background: "#f1efe9", land: "#e4e2dc", water: "#bcd7e8", park: "rgba(120, 180, 90, 0.18)", outline: "rgba(255, 255, 255, 0.9)", contour: "#111111", halo: "#ffffff", from: "#3aa70b", to: "#111111", route: "#111111" },
-  night: { background: "#070a10", land: "#10151f", water: "#0a1626", park: "rgba(80, 140, 90, 0.12)", outline: "rgba(150, 170, 200, 0.35)", contour: "rgba(255, 255, 255, 0.9)", halo: "#070a10", from: "#59e21c", to: "#ffffff", route: "#ffffff" },
+  day: { background: "#f1efe9", land: "#e4e2dc", water: "#bcd7e8", waterMask: "rgba(188, 215, 232, 0.5)", park: "rgba(120, 180, 90, 0.18)", outline: "rgba(255, 255, 255, 0.9)", contour: "#111111", halo: "#ffffff", from: "#3aa70b", to: "#111111", route: "#111111" },
+  night: { background: "#070a10", land: "#10151f", water: "#0a1626", waterMask: "rgba(10, 22, 38, 0.5)", park: "rgba(80, 140, 90, 0.12)", outline: "rgba(150, 170, 200, 0.35)", contour: "#e8e8e8", halo: "#070a10", from: "#59e21c", to: "#ffffff", route: "#ffffff" },
 };
 // Bus de la Ville : 12 teintes par numéro de ligne, voisines éloignées ; le liseré porte le contraste.
 const BUS_COLORS = ["#1565C0", "#EF6C00", "#00838F", "#C62828", "#2E7D32", "#AD1457", "#283593", "#F9A825", "#00897B", "#6D4C41", "#D81B60", "#558B2F"];
@@ -51,6 +51,8 @@ const app = {
   to: null,
   includeBus: true,
   showNightLines: false,
+  showBusLines: true,
+  relief: "auto", // exagération du relief : "auto" (selon la distance) ou un facteur fixe
   showVehicles: !matchMedia("(prefers-reduced-motion: reduce)").matches,
   night: false,
   heatFrom: "from", // la carte des temps part du départ ou de l'arrivée, comme en 2D (carte=arrivee)
@@ -201,21 +203,158 @@ function buildSurface(bounds, cols, rows, under = null) {
   return geometry;
 }
 
-function addSurface(bounds, step, maxTexture, behind, under = null) {
+// Le sol est peint dans un shader, pour chaque pixel : fond (terre, eau, parcs, limites) depuis une texture fixe,
+// ombrage tiré de la grille de relief (10 m en ville), carte des temps et isochrones tirées de la grille des temps
+// (même calcul et même palette que la 2D, interpolées sur le GPU : nettes à tous les zooms, traits de 2 px).
+const TERRAIN_VERTEX = `
+  varying vec2 vLocal;
+  varying vec2 vUv;
+  varying float vDepth;
+  void main() {
+    vLocal = vec2(position.x, -position.z);
+    vUv = uv;
+    vec4 view = modelViewMatrix * vec4(position, 1.0);
+    vDepth = -view.z;
+    gl_Position = projectionMatrix * view;
+  }
+`;
+
+const TERRAIN_FRAGMENT = `
+  uniform sampler2D baseMap;
+  uniform sampler2D heightMap;
+  uniform sampler2D heatMap;
+  uniform vec4 heightRect;
+  uniform vec2 heightCell;
+  uniform vec4 heatRect;
+  uniform float exaggeration;
+  uniform vec3 sunDirection;
+  uniform vec2 shade;
+  uniform float maxMinutes;
+  uniform float beyondFade;
+  uniform float heatAlpha;
+  uniform float heatOn;
+  uniform vec3 stops[5];
+  uniform float stopAt[5];
+  uniform vec4 isochrones;
+  uniform vec3 contourColor;
+  uniform vec3 haloColor;
+  uniform vec3 backgroundColor;
+  uniform vec2 fog;
+  varying vec2 vLocal;
+  varying vec2 vUv;
+  varying float vDepth;
+
+  vec3 palette(float t) {
+    t = clamp(t, 0.0, 1.0);
+    for (int i = 1; i < 5; i++) {
+      if (t <= stopAt[i]) return mix(stops[i - 1], stops[i], (t - stopAt[i - 1]) / (stopAt[i] - stopAt[i - 1]));
+    }
+    return stops[4];
+  }
+
+  void main() {
+    vec4 base = texture2D(baseMap, vUv);
+    vec3 color = base.a < 0.25 ? backgroundColor : base.rgb;
+    float land = step(0.75, base.a);
+
+    vec2 h = (vLocal - heightRect.xy) / (heightRect.zw - heightRect.xy);
+    vec2 texel = 1.0 / vec2(textureSize(heightMap, 0));
+    float hl = texture2D(heightMap, h - vec2(texel.x, 0.0)).r;
+    float hr = texture2D(heightMap, h + vec2(texel.x, 0.0)).r;
+    float hd = texture2D(heightMap, h - vec2(0.0, texel.y)).r;
+    float hu = texture2D(heightMap, h + vec2(0.0, texel.y)).r;
+    vec3 normal = normalize(vec3((hl - hr) * exaggeration / (2.0 * heightCell.x), 1.0, (hu - hd) * exaggeration / (2.0 * heightCell.y)));
+    float light = clamp(dot(normal, sunDirection), 0.0, 1.0);
+
+    vec4 heat = texture2D(heatMap, (vLocal - heatRect.xy) / (heatRect.zw - heatRect.xy));
+    if (heatOn > 0.5 && land > 0.5 && heat.g >= 0.25) {
+      float t = heat.r / heat.g / maxMinutes;
+      float alpha = t <= 1.0 ? 1.0 : clamp(1.0 - (t - 1.0) / beyondFade, 0.0, 1.0);
+      color = mix(color, palette(t), heatAlpha * alpha);
+    }
+    color *= mix(shade.x, shade.y, light);
+
+    if (land > 0.5 && heat.g > 0.99) {
+      float s = heat.b;
+      float width = max(fwidth(s), 1e-4);
+      for (int i = 0; i < 4; i++) {
+        float level = isochrones[i];
+        if (level <= 0.0) continue;
+        float d = abs(s - level) / width;
+        if (d < 1.1) color = contourColor;
+        else if (d < 2.3) color = mix(haloColor, color, 0.25);
+      }
+    }
+    color = mix(color, backgroundColor, smoothstep(fog.x, fog.y, vDepth));
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+const toHalf = THREE.DataUtils.toHalfFloat;
+
+/** Texture de hauteurs (mètres au-dessus de BASE_HEIGHT, demi-flottants filtrables) d'une grille de relief. */
+function heightTexture(grid) {
+  const data = new Uint16Array(grid.cols * grid.rows);
+  grid.heights.forEach((h, i) => (data[i] = toHalf((h === h ? h : NODATA_HEIGHT) - BASE_HEIGHT)));
+  const texture = new THREE.DataTexture(data, grid.cols, grid.rows, THREE.RedFormat, THREE.HalfFloatType);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+const rgb = (hex) => new THREE.Color(hex).toArray().map((v) => v); // valeurs sRGB brutes : le shader écrit tel quel
+const heatTexture = { texture: null };
+
+function sharedUniforms() {
+  return {
+    heatMap: { value: null },
+    heatRect: { value: new THREE.Vector4() },
+    exaggeration: { value: 1 },
+    sunDirection: { value: new THREE.Vector3(-1, 1.1, -1).normalize() },
+    shade: { value: new THREE.Vector2(0.62, 1.1) },
+    maxMinutes: { value: DEFAULT_MAX },
+    beyondFade: { value: core.BEYOND_FADE },
+    heatAlpha: { value: HEAT_ALPHA.day },
+    heatOn: { value: 1 },
+    stops: { value: core.PALETTE.map(([, c]) => new THREE.Vector3(...c.map((v) => v / 255))) },
+    stopAt: { value: core.PALETTE.map(([stop]) => stop) },
+    isochrones: { value: new THREE.Vector4() },
+    contourColor: { value: new THREE.Vector3() },
+    haloColor: { value: new THREE.Vector3() },
+    backgroundColor: { value: new THREE.Vector3() },
+    fog: { value: new THREE.Vector2(1e9, 2e9) },
+  };
+}
+const uniforms = sharedUniforms();
+
+function addSurface(bounds, step, maxTexture, behind, under = null, grid = null) {
   const cols = Math.round((bounds[2] - bounds[0]) / step) + 1;
   const rows = Math.round((bounds[3] - bounds[1]) / step) + 1;
-  const textureCanvas = document.createElement("canvas");
+  const baseCanvas = document.createElement("canvas");
   const fit = maxTexture / Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]);
-  textureCanvas.width = Math.round((bounds[2] - bounds[0]) * fit);
-  textureCanvas.height = Math.round((bounds[3] - bounds[1]) * fit);
-  const texture = new THREE.CanvasTexture(textureCanvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  const material = new THREE.MeshLambertMaterial({ map: texture });
+  baseCanvas.width = Math.round((bounds[2] - bounds[0]) * fit);
+  baseCanvas.height = Math.round((bounds[3] - bounds[1]) * fit);
+  const base = new THREE.CanvasTexture(baseCanvas);
+  base.colorSpace = THREE.NoColorSpace;
+  base.premultiplyAlpha = false;
+  base.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const [ol, ob, or_, ot] = grid.bounds;
+  const material = new THREE.ShaderMaterial({
+    vertexShader: TERRAIN_VERTEX,
+    fragmentShader: TERRAIN_FRAGMENT,
+    uniforms: {
+      ...uniforms,
+      baseMap: { value: base },
+      heightMap: { value: heightTexture(grid) },
+      heightRect: { value: new THREE.Vector4(ol - origin[0], ob - origin[1], or_ - origin[0], ot - origin[1]) },
+      heightCell: { value: new THREE.Vector2((or_ - ol) / grid.cols, (ot - ob) / grid.rows) },
+    },
+  });
   if (behind) Object.assign(material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
   const mesh = new THREE.Mesh(buildSurface(bounds, cols, rows, under), material);
   relief.add(mesh);
-  const surface = { bounds, mesh, canvas: textureCanvas, base: document.createElement("canvas"), texture };
+  const surface = { bounds, mesh, canvas: baseCanvas, texture: base };
   surfaces.push(surface);
   return surface;
 }
@@ -234,76 +373,76 @@ function ringPath(path, ring) {
   path.closePath();
 }
 
-/** Fond statique d'une texture : terre, parcs, eau, limites de communes (refait au changement d'ambiance). */
+/** Fond fixe d'une surface : terre et parcs opaques (la carte des temps s'y pose), eau à demi, hors du pays transparent. */
 function paintBase(surface) {
   const colors = palette();
-  surface.base.width = surface.canvas.width;
-  surface.base.height = surface.canvas.height;
-  const ctx = surface.base.getContext("2d");
-  ctx.fillStyle = colors.background;
-  ctx.fillRect(0, 0, surface.base.width, surface.base.height);
+  const ctx = surface.canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, surface.canvas.width, surface.canvas.height);
   const scale = worldTransform(ctx, surface);
   const land = new Path2D();
   for (const commune of app.data.boroughs) for (const polygon of commune.polygons) for (const ring of polygon) ringPath(land, ring);
   ctx.fillStyle = colors.land;
   ctx.fill(land, "evenodd");
-  for (const [items, color] of [[app.data.parks, colors.park], [app.data.water, colors.water]]) {
-    const path = new Path2D();
-    for (const polygon of items) for (const ring of polygon) ringPath(path, ring);
-    ctx.fillStyle = color;
-    ctx.fill(path, "evenodd");
-  }
+  const parks = new Path2D();
+  for (const polygon of app.data.parks) for (const ring of polygon) ringPath(parks, ring);
+  ctx.fillStyle = colors.park;
+  ctx.fill(parks, "evenodd");
+  const water = new Path2D();
+  for (const polygon of app.data.water) for (const ring of polygon) ringPath(water, ring);
+  // L'eau efface la terre (destination-out), puis est peinte à demi transparente : le shader n'y pose pas les temps.
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fill(water, "evenodd");
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = colors.waterMask;
+  ctx.fill(water, "evenodd");
   const outlines = new Path2D();
   for (const commune of app.data.boroughs) for (const ring of commune.outline) ringPath(outlines, ring);
   ctx.strokeStyle = colors.outline;
   ctx.lineWidth = 1.2 / scale;
   ctx.stroke(outlines);
-  surface.land = land;
+  surface.texture.needsUpdate = true;
 }
 
-const heatCanvas = document.createElement("canvas");
-
-/** Carte de chaleur et isochrones sur chaque texture, à partir de la même grille que la 2D. */
-function paintSurfaces({ fast = false } = {}) {
+/** Envoie au GPU la grille des temps : R = temps x validité, G = validité, B = temps lissé (isochrones). */
+function paintSurfaces() {
   if (!app.grid) return;
-  const { width, height, data } = core.heatPixels(app.grid, app.maxMinutes, fast ? 1 : core.HEAT_UPSAMPLE);
-  heatCanvas.width = width;
-  heatCanvas.height = height;
-  heatCanvas.getContext("2d").putImageData(new ImageData(data, width, height), 0, 0);
-  const [mx, my, mx2, my2] = app.data.meta.bounds;
-  const colors = palette();
-  const contours = fast ? [] : app.isochrones.map((minutes) => core.contourSegments(app.data.meta.bounds, app.grid, minutes));
-  // Pendant un glisser, seule la texture de la ville (la plus petite, au premier plan) est repeinte.
-  for (const surface of fast ? surfaces.slice(1) : surfaces) {
-    const ctx = surface.canvas.getContext("2d");
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(surface.base, 0, 0);
-    const scale = worldTransform(ctx, surface);
-    ctx.save();
-    ctx.clip(surface.land, "evenodd");
-    ctx.globalAlpha = app.night ? HEAT_ALPHA.night : HEAT_ALPHA.day;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(heatCanvas, mx, my, mx2 - mx, my2 - my);
-    ctx.globalAlpha = 1;
-    const pixel = 1 / scale;
-    const lineScale = Math.max(1, surface.canvas.width / 2048);
-    for (const segments of contours) {
-      const path = new Path2D();
-      for (const [[ax, ay], [bx, by]] of segments) {
-        path.moveTo(ax, ay);
-        path.lineTo(bx, by);
-      }
-      ctx.lineCap = "round";
-      ctx.strokeStyle = colors.halo;
-      ctx.lineWidth = 4.5 * lineScale * pixel;
-      ctx.stroke(path);
-      ctx.strokeStyle = colors.contour;
-      ctx.lineWidth = 2.2 * lineScale * pixel;
-      ctx.stroke(path);
-    }
-    ctx.restore();
-    surface.texture.needsUpdate = true;
+  const { cols, rows, times, smooth } = app.grid;
+  const filled = core.fillGaps(times, cols, rows, 2); // comme heatPixels : un cran hors de la terre
+  const data = new Uint16Array(cols * rows * 4);
+  for (let i = 0; i < cols * rows; i += 1) {
+    const valid = filled[i] === filled[i] ? 1 : 0;
+    data[i * 4] = toHalf(valid ? filled[i] : 0);
+    data[i * 4 + 1] = toHalf(valid);
+    data[i * 4 + 2] = toHalf(smooth[i] === smooth[i] ? smooth[i] : 999);
+    data[i * 4 + 3] = toHalf(1);
   }
+  if (!heatTexture.texture || heatTexture.texture.image.width !== cols) {
+    heatTexture.texture?.dispose();
+    heatTexture.texture = new THREE.DataTexture(data, cols, rows, THREE.RGBAFormat, THREE.HalfFloatType);
+    heatTexture.texture.magFilter = THREE.LinearFilter;
+    heatTexture.texture.minFilter = THREE.LinearFilter;
+  } else {
+    heatTexture.texture.image.data = data;
+  }
+  heatTexture.texture.needsUpdate = true;
+  const [left, bottom, right, top] = app.data.meta.bounds;
+  uniforms.heatMap.value = heatTexture.texture;
+  uniforms.heatRect.value.set(left - origin[0], bottom - origin[1], right - origin[0], top - origin[1]);
+  updateUniforms();
+}
+
+/** Échelle, isochrones et couleurs d'ambiance du shader. */
+function updateUniforms() {
+  const colors = palette();
+  uniforms.maxMinutes.value = app.maxMinutes;
+  const levels = [...app.isochrones].slice(0, 4);
+  uniforms.isochrones.value.set(levels[0] ?? 0, levels[1] ?? 0, levels[2] ?? 0, levels[3] ?? 0);
+  uniforms.heatAlpha.value = app.night ? HEAT_ALPHA.night : HEAT_ALPHA.day;
+  uniforms.contourColor.value.set(...rgb(colors.contour));
+  uniforms.haloColor.value.set(...rgb(colors.halo));
+  uniforms.backgroundColor.value.set(...rgb(colors.background));
+  uniforms.shade.value.set(...(app.night ? [0.55, 1.15] : [0.62, 1.1]));
   requestRender();
 }
 
@@ -354,7 +493,7 @@ function disposeGroup(group) {
   for (const geometry of geometries) geometry.dispose();
 }
 
-function addLine(group, positions, color, width, { halo = true, glow = false, order = 0 } = {}) {
+function addLine(group, positions, color, width, { halo = true, glow = false, order = 0, opacity = 1 } = {}) {
   const geometry = new LineGeometry();
   geometry.setPositions(positions);
   const colors = palette();
@@ -365,11 +504,11 @@ function addLine(group, positions, color, width, { halo = true, glow = false, or
     group.add(light);
   } else if (halo) {
     // Le liseré n'écrit pas la profondeur : la ligne de couleur, dessinée après, passe toujours dessus.
-    const under = new Line2(geometry, lineMaterial(colors.halo, width + 2, { depthWrite: false }));
+    const under = new Line2(geometry, lineMaterial(colors.halo, width + 1.5, { depthWrite: false }));
     under.renderOrder = order;
     group.add(under);
   }
-  const line = new Line2(geometry, lineMaterial(color, width));
+  const line = new Line2(geometry, lineMaterial(color, width, opacity < 1 ? { transparent: true, opacity, depthWrite: false } : {}));
   line.renderOrder = order + 1;
   group.add(line);
 }
@@ -446,12 +585,13 @@ function drawLines() {
   const night = app.night;
   for (const shape of app.shapes) {
     if (shape.kind === "night" && !app.showNightLines) continue;
-    if (shape.kind === "bus" && !app.includeBus) continue;
+    if ((shape.kind === "bus" || shape.kind === "night") && (!app.includeBus || !app.showBusLines)) continue;
     const base = shape.kind === "train" && night ? "#B0BEC5" : shape.color;
     const color = night ? lighten(base, 0.35) : base;
-    const width = { tram: 5, train: 4, bus: 2.5, night: 2 }[shape.kind];
+    const bus = shape.kind === "bus" || shape.kind === "night";
+    const width = { tram: 3.5, train: 2.5, bus: 1.4, night: 1.2 }[shape.kind];
     const order = { bus: 2, night: 2, train: 6, tram: 8 }[shape.kind];
-    addLine(lineGroup, shape.positions, color, width, { glow: night, order });
+    addLine(lineGroup, shape.positions, color, width, { glow: night && !bus, halo: !bus, order, opacity: bus ? 0.7 : 1 });
   }
   relief.add(lineGroup);
   buildVehicles();
@@ -755,7 +895,7 @@ function setAmbiance(night, { quiet = false } = {}) {
   for (const button of $("ambiance").querySelectorAll("button")) button.setAttribute("aria-pressed", String((button.dataset.ambiance === "nuit") === night));
   for (const surface of surfaces) paintBase(surface);
   if (app.shapes) drawLines();
-  paintSurfaces();
+  updateUniforms();
   drawRoute();
   if (!quiet) syncUrl();
 }
@@ -774,7 +914,8 @@ function smoothstep(a, b, x) {
 /** Exagération du relief, brouillard et échelle des temps selon la distance de la caméra. */
 function followCamera() {
   const distance = viewDistance();
-  const exaggeration = 1.5 + smoothstep(3000, 12000, distance);
+  const exaggeration = app.relief === "auto" ? 1.5 + smoothstep(3000, 12000, distance) : Number(app.relief);
+  uniforms.exaggeration.value = exaggeration;
   relief.scale.y = exaggeration;
   const ground = (groundHeight(controls.target.x + origin[0], -controls.target.z + origin[1]) - BASE_HEIGHT) * exaggeration;
   const lift = ground - controls.target.y;
@@ -788,6 +929,7 @@ function followCamera() {
   const top = camera.position.y > 0 && Math.abs(camera.position.x - controls.target.x) + Math.abs(camera.position.z - controls.target.z) < distance * 0.05;
   scene.fog.near = top ? 1e9 : distance * 2.5;
   scene.fog.far = top ? 2e9 : distance * 6;
+  uniforms.fog.value.set(scene.fog.near, scene.fog.far);
   if (app.autoScale && app.grid) {
     const visibleKm = (2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect) / 1000;
     const k = core.clamp((visibleKm - 12) / (70 - 12), 0, 1);
@@ -799,7 +941,7 @@ function followCamera() {
       $("maxRange").value = String(max);
       for (const input of $("isoToggles").querySelectorAll("input")) input.checked = isochrones.includes(Number(input.value));
       updateLegend();
-      paintSurfaces();
+      updateUniforms();
     }
   }
 }
@@ -956,6 +1098,24 @@ $("busToggle").addEventListener("change", (event) => {
   syncUrl();
 });
 
+$("busLinesToggle").addEventListener("change", (event) => {
+  if (!app.data) return;
+  app.showBusLines = event.target.checked;
+  drawLines();
+});
+
+$("heatToggle").addEventListener("change", (event) => {
+  if (!app.data) return;
+  uniforms.heatOn.value = event.target.checked ? 1 : 0;
+  requestRender();
+});
+
+$("reliefSelect").addEventListener("change", (event) => {
+  if (!app.data) return;
+  app.relief = event.target.value;
+  requestRender();
+});
+
 $("nightLinesToggle").addEventListener("change", (event) => {
   if (!app.data) return;
   app.showNightLines = event.target.checked;
@@ -974,7 +1134,7 @@ $("isoToggles").addEventListener("change", () => {
   if (!app.data) return;
   app.autoScale = false;
   app.isochrones = [...$("isoToggles").querySelectorAll("input:checked")].map((input) => Number(input.value));
-  paintSurfaces();
+  updateUniforms();
   syncUrl();
 });
 
@@ -983,7 +1143,7 @@ $("maxRange").addEventListener("input", (event) => {
   app.autoScale = false;
   app.maxMinutes = Number(event.target.value);
   updateLegend();
-  paintSurfaces();
+  updateUniforms();
   syncUrl();
 });
 
@@ -1229,10 +1389,10 @@ async function init() {
   const [left, bottom, right, top] = app.data.meta.bounds;
   origin = [(left + right) / 2, (bottom + top) / 2];
 
-  // Textures : pays à environ 25 m par pixel, ville à 5 m (10 m sur mobile).
+  // Fonds fixes : pays à environ 25 m par pixel, ville à 5 m ; temps et ombrage viennent des grilles, dans le shader.
   const maxTexture = Math.min(renderer.capabilities.maxTextureSize, MOBILE ? 2048 : 3072);
-  addSurface(app.data.meta.bounds, MOBILE ? 400 : 250, maxTexture, true, app.terrain.city.bounds);
-  addSurface(app.terrain.city.bounds, MOBILE ? 50 : 30, Math.min(maxTexture, 2048), false);
+  addSurface(app.data.meta.bounds, MOBILE ? 400 : 250, maxTexture, true, app.terrain.city.bounds, app.terrain.country);
+  addSurface(app.terrain.city.bounds, MOBILE ? 50 : 30, Math.min(maxTexture, 2048), false, null, app.terrain.city);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = false;

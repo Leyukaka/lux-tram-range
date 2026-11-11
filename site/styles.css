@@ -1443,3 +1443,39 @@ output {
   min-width: 2.4em;
   text-align: center;
 }
+
+.help-3d {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  max-width: min(360px, calc(100% - 270px));
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.stage-3d.night .help-3d {
+  background: rgba(10, 14, 22, 0.82);
+  color: #b9c3d0;
+}
+
+#reliefSelect {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+@media (max-width: 640px) {
+  .help-3d {
+    display: none;
+  }
+}
+
